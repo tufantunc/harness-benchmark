@@ -1,0 +1,31 @@
+# benchmark.yaml
+model:
+  url: https://open.bigmodel.cn/api/paas/v4/
+  protocol: openai
+  name: glm-5.2
+  api_key_env: LLM_API_KEY
+
+task:
+  source: polyglot
+  languages: [python, javascript]
+  addendum: |
+    Modify only the supplied files. Don't rename functions or classes.
+    Only use standard libraries. Don't install packages.
+
+run:
+  repetitions: 3
+  timeout_sec: 600
+  skip_existing: true
+  retry_failed: false
+  parallel: 1
+
+harnesses: [opencode, pi]
+
+docker:
+  image: harness:latest
+  results_volume: ./results
+
+reporting:
+  output: [sqlite, html, markdown]
+  pages_path: docs
+  auto_commit: true
