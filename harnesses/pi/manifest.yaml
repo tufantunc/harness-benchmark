@@ -1,0 +1,31 @@
+# harnesses/pi/manifest.yaml
+name: pi
+version: "latest"
+install: npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+
+invoke:
+  command: pi -p "$PROMPT" --mode json --cwd "$WORKDIR"
+  model_flag: --model benchmark/$MODEL_NAME
+
+setup: |
+  mkdir -p "$WORKDIR/.pi"
+  cat > "$WORKDIR/.pi/models.json" <<PIEOF
+  {
+    "providers": {
+      "benchmark": {
+        "name": "benchmark",
+        "protocol": "$PROTOCOL",
+        "baseUrl": "$MODEL_URL",
+        "apiKey": "$API_KEY",
+        "models": {
+          "$MODEL_NAME": {
+            "name": "$MODEL_NAME"
+          }
+        }
+      }
+    }
+  }
+  PIEOF
+
+metric_source: events.jsonl
+metric_format: pi
