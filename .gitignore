@@ -2,10 +2,12 @@
 .env
 .env.local
 
-# Results — SQLite store + artifacts (large, machine-specific)
-results/store.db
+# Results — artifacts are large and machine-specific (ignored)
 results/store.db-journal
 results/artifacts/
+
+# Store DB IS committed (incremental leaderboard continuity)
+!results/store.db
 
 # Published leaderboards are tracked (for Pages), raw run data is not
 !results/leaderboards/
