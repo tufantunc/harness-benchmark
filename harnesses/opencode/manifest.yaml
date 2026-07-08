@@ -1,0 +1,33 @@
+# harnesses/opencode/manifest.yaml
+name: opencode
+version: "0.1.48"
+install: npm install -g opencode-ai
+
+invoke:
+  command: opencode run "$PROMPT" --format json --dir "$WORKDIR" --auto
+  model_flag: --model benchmark/$MODEL_NAME
+
+setup: |
+  mkdir -p "$WORKDIR"
+  cat > "$WORKDIR/opencode.json" <<OCEOF
+  {
+    "provider": {
+      "benchmark": {
+        "npm": "@ai-sdk/openai-compatible",
+        "name": "benchmark",
+        "options": {
+          "baseURL": "$MODEL_URL",
+          "apiKey": "$API_KEY"
+        },
+        "models": {
+          "$MODEL_NAME": {
+            "name": "$MODEL_NAME"
+          }
+        }
+      }
+    }
+  }
+  OCEOF
+
+metric_source: events.jsonl
+metric_format: opencode
