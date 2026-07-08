@@ -1,0 +1,10 @@
+.venv/
+.git/
+node_modules/
+*.egg-info/
+__pycache__/
+.pytest_cache/
+results/artifacts/
+results/store.db
+results/store.db-journal
+docs/superpowers/
