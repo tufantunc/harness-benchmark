@@ -1,0 +1,15 @@
+# harnesses/_template/manifest.yaml
+# Copy this directory to harnesses/<your-harness>/ and customize.
+name: template
+version: "0.0.0"
+install: npm install -g your-harness-package
+
+invoke:
+  command: your-harness run "$PROMPT" --json --workdir "$WORKDIR"
+  model_flag: --model benchmark/$MODEL_NAME
+
+setup: |
+  echo "Add setup logic here to create provider config for your harness"
+
+metric_source: events.jsonl
+metric_format: pi
