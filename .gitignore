@@ -1,0 +1,41 @@
+# Environment
+.env
+.env.local
+
+# Results — SQLite store + artifacts (large, machine-specific)
+results/store.db
+results/store.db-journal
+results/artifacts/
+
+# Published leaderboards are tracked (for Pages), raw run data is not
+!results/leaderboards/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Node
+node_modules/
+
+# Docker
+*.docker-image
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Benchmark temp
+tmp.benchmarks/
+
+# inspect-ai
+*.eval
+.log/
