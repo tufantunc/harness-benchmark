@@ -35,6 +35,8 @@ class RunConfig:
     skip_existing: bool = True
     retry_failed: bool = False
     parallel: int = 1
+    abort_after_consecutive_failures: int = 5
+    delay_sec: int = 0
 
 
 @dataclass
@@ -86,6 +88,10 @@ def load_config(
         run.repetitions = int(env_reps)
     if env_timeout := os.environ.get("TASK_TIMEOUT"):
         run.timeout_sec = int(env_timeout)
+    if env_delay := os.environ.get("DELAY_SEC"):
+        run.delay_sec = int(env_delay)
+    if env_abort := os.environ.get("ABORT_AFTER"):
+        run.abort_after_consecutive_failures = int(env_abort)
 
     # CLI overrides (highest priority)
     if "model_url" in cli_overrides:
@@ -98,6 +104,10 @@ def load_config(
         run.repetitions = cli_overrides["repetitions"]
     if "timeout_sec" in cli_overrides:
         run.timeout_sec = cli_overrides["timeout_sec"]
+    if "delay_sec" in cli_overrides:
+        run.delay_sec = cli_overrides["delay_sec"]
+    if "abort_after" in cli_overrides:
+        run.abort_after_consecutive_failures = cli_overrides["abort_after"]
     if "harnesses" in cli_overrides:
         harnesses = cli_overrides["harnesses"]
     if "languages" in cli_overrides:

@@ -23,7 +23,12 @@ def parse_args():
     parser.add_argument("--repetitions", type=int, help="Repetitions per task")
     parser.add_argument("--timeout-sec", dest="timeout_sec", type=int, help="Per-task timeout")
     parser.add_argument("--skip-existing", dest="skip_existing", action="store_true", default=None)
-    parser.add_argument("--retry-failed", dest="retry_failed", action="store_true", default=None)
+    parser.add_argument("--no-skip-existing", dest="skip_existing", action="store_false", default=None)
+    parser.add_argument("--retry-failed", dest="retry_failed", action="store_true", default=None,
+                        help="Re-run failed tasks (skip successful ones)")
+    parser.add_argument("--delay-sec", dest="delay_sec", type=int, help="Delay between tasks (rate limit protection)")
+    parser.add_argument("--abort-after", dest="abort_after", type=int,
+                        help="Abort after N consecutive failures (default: 5)")
     parser.add_argument("--report-only", dest="report_only", action="store_true", help="Generate report only")
     return parser.parse_args()
 
@@ -50,6 +55,10 @@ def main():
         cli_overrides["skip_existing"] = args.skip_existing
     if args.retry_failed is not None:
         cli_overrides["retry_failed"] = args.retry_failed
+    if args.delay_sec is not None:
+        cli_overrides["delay_sec"] = args.delay_sec
+    if args.abort_after is not None:
+        cli_overrides["abort_after"] = args.abort_after
 
     config = load_config(Path(args.config), cli_overrides)
 

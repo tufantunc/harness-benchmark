@@ -109,6 +109,33 @@ class Store:
             ).fetchone()
             return row is not None
 
+    def exists_successful(self, harness: str, model: str, language: str, exercise: str, rep: int) -> bool:
+        """True only if the task exists AND succeeded."""
+        with sqlite3.connect(self.db_path) as conn:
+            row = conn.execute(
+                "SELECT success FROM runs WHERE harness=? AND model=? AND language=? AND exercise=? AND repetition=?",
+                (harness, model, language, exercise, rep),
+            ).fetchone()
+            return row is not None and bool(row[0])
+
+    def count_by_success(self, harness: str | None = None, model: str | None = None) -> dict[str, int]:
+        """Count results grouped by success/failure."""
+        clauses = []
+        params = []
+        if harness:
+            clauses.append("harness = ?")
+            params.append(harness)
+        if model:
+            clauses.append("model = ?")
+            params.append(model)
+        where = " WHERE " + " AND ".join(clauses) if clauses else ""
+        with sqlite3.connect(self.db_path) as conn:
+            rows = conn.execute(
+                f"SELECT success, COUNT(*) FROM runs{where} GROUP BY success",
+                params,
+            ).fetchall()
+        return {"success": sum(c for s, c in rows if s), "failed": sum(c for s, c in rows if not s)}
+
     def query(
         self,
         harness: str | None = None,

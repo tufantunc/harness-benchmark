@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,10 +31,16 @@ def run_single(
     store = Store(Path(config.docker.results_volume) / "store.db")
     store.init_schema()
 
-    if config.run.skip_existing and store.exists(
-        harness, config.model.name, exercise.language, exercise.name, repetition
-    ):
-        return RunOutcome(metrics={}, skipped=True)
+    # Decide whether to skip:
+    # - skip_existing=True, retry_failed=False: skip everything in store
+    # - skip_existing=True, retry_failed=True: skip only successful, re-run failed
+    # - skip_existing=False: run everything
+    if config.run.skip_existing and not config.run.retry_failed:
+        if store.exists(harness, config.model.name, exercise.language, exercise.name, repetition):
+            return RunOutcome(metrics={}, skipped=True)
+    elif config.run.skip_existing and config.run.retry_failed:
+        if store.exists_successful(harness, config.model.name, exercise.language, exercise.name, repetition):
+            return RunOutcome(metrics={}, skipped=True)
 
     image = config.docker.image
     results_vol = str(Path(config.docker.results_volume).resolve())
@@ -127,6 +134,9 @@ def run_benchmark(config: Config, exercises: list[Exercise]) -> dict:
     completed = 0
     skipped = 0
     failed = 0
+    succeeded = 0
+    consecutive_failures = 0
+    aborted = False
 
     print(f"Starting benchmark run {run_id}")
     print(f"  Harnesses: {config.harnesses}")
@@ -134,25 +144,63 @@ def run_benchmark(config: Config, exercises: list[Exercise]) -> dict:
     print(f"  Exercises: {len(exercises)}")
     print(f"  Repetitions: {config.run.repetitions}")
     print(f"  Total runs: {total}")
+    if config.run.retry_failed:
+        print(f"  Mode: RETRY FAILED (skip successful, re-run failed)")
+    if config.run.abort_after_consecutive_failures > 0:
+        print(f"  Abort after {config.run.abort_after_consecutive_failures} consecutive failures")
+    if config.run.delay_sec > 0:
+        print(f"  Delay: {config.run.delay_sec}s between tasks")
     print()
 
     for harness in config.harnesses:
+        if aborted:
+            break
         for exercise in exercises:
+            if aborted:
+                break
             for rep in range(1, config.run.repetitions + 1):
+                if aborted:
+                    break
                 completed += 1
                 print(f"[{completed}/{total}] {harness}/{exercise.language}/{exercise.name} rep-{rep}", end=" ... ")
 
                 outcome = run_single(config, harness, exercise, rep, run_id)
 
                 if outcome.skipped:
-                    print("SKIP (exists)")
+                    print("SKIP")
                     skipped += 1
                 elif outcome.metrics.get("success"):
                     print("PASS")
+                    succeeded += 1
+                    consecutive_failures = 0
                 else:
                     print("FAIL")
                     failed += 1
+                    consecutive_failures += 1
+
+                    if (config.run.abort_after_consecutive_failures > 0 and
+                            consecutive_failures >= config.run.abort_after_consecutive_failures):
+                        print(f"\n!!! ABORTED: {consecutive_failures} consecutive failures")
+                        print("    Likely rate limit or API error. Re-run with --retry-failed when ready.")
+                        aborted = True
+                        break
+
+                if config.run.delay_sec > 0:
+                    time.sleep(config.run.delay_sec)
 
     print()
-    print(f"Done: {completed - skipped} ran, {skipped} skipped, {failed} failed")
-    return {"run_id": run_id, "total": total, "skipped": skipped, "failed": failed}
+    if aborted:
+        print(f"ABORTED after {completed}/{total} runs ({succeeded} passed, {failed} failed, {skipped} skipped)")
+        print("Re-run with: ./scripts/benchmark.sh --retry-failed")
+    else:
+        print(f"Done: {succeeded} passed, {failed} failed, {skipped} skipped (out of {total})")
+
+    return {
+        "run_id": run_id,
+        "total": total,
+        "completed": completed,
+        "succeeded": succeeded,
+        "failed": failed,
+        "skipped": skipped,
+        "aborted": aborted,
+    }
