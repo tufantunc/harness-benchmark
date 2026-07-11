@@ -75,7 +75,19 @@ def load_config(
     reporting = ReportingConfig(**raw.get("reporting", {}))
     harnesses = raw.get("harnesses", ["opencode", "pi"])
 
-    # CLI overrides
+    # Env var overrides (yaml < .env < CLI)
+    if env_url := os.environ.get("MODEL_URL"):
+        model.url = env_url
+    if env_protocol := os.environ.get("MODEL_PROTOCOL"):
+        model.protocol = env_protocol
+    if env_name := os.environ.get("MODEL_NAME"):
+        model.name = env_name
+    if env_reps := os.environ.get("REPETITIONS"):
+        run.repetitions = int(env_reps)
+    if env_timeout := os.environ.get("TASK_TIMEOUT"):
+        run.timeout_sec = int(env_timeout)
+
+    # CLI overrides (highest priority)
     if "model_url" in cli_overrides:
         model.url = cli_overrides["model_url"]
     if "model_protocol" in cli_overrides:
