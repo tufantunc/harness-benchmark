@@ -45,12 +45,24 @@ fi
 
 git add -A && git commit -q -m "exercise setup" 2>/dev/null || true
 
-# --- 2. SETUP HOOK: generate harness-specific provider config ---
+# --- 2. START PROXY + SETUP HOOK ---
 HARNESS_DIR="/app/harnesses/$HARNESS"
 MANIFEST="$HARNESS_DIR/manifest.yaml"
 
-export MODEL_URL PROTOCOL MODEL_NAME
+export PROTOCOL MODEL_NAME
 export API_KEY="${LLM_API_KEY:-}"
+
+# Start logging proxy (transparent to agent: agent → proxy → real API)
+REAL_MODEL_URL="${MODEL_URL:-}"
+export UPSTREAM_URL="$REAL_MODEL_URL"
+export CAPTURE_DIR="$OUTPUT/captured-payloads"
+export PROXY_PORT=8080
+node /app/container/proxy.js > "$OUTPUT/proxy.log" 2>&1 &
+PROXY_PID=$!
+sleep 1
+
+# Override MODEL_URL to proxy so setup hook generates config pointing at proxy
+export MODEL_URL="http://127.0.0.1:${PROXY_PORT}"
 
 SETUP_SCRIPT=$(jq -r '.setup // empty' "$MANIFEST" 2>/dev/null || true)
 if [ -n "$SETUP_SCRIPT" ]; then
@@ -82,6 +94,13 @@ if [ "$AGENT_EXIT" = 124 ]; then
     TIMED_OUT=1
 fi
 
+# Kill proxy + analyze captured payloads
+kill "$PROXY_PID" 2>/dev/null || true
+wait "$PROXY_PID" 2>/dev/null || true
+
+node /app/container/analyze-proxy.js "$OUTPUT/captured-payloads" > "$OUTPUT/proxy-analysis.json" 2>/dev/null || \
+    echo '{"cache_write_tokens":0,"cache_read_tokens":0,"system_prompt_tokens":0,"tool_schema_tokens":0,"prefix_stable":true,"prefix_variants":0,"request_count":0}' > "$OUTPUT/proxy-analysis.json"
+
 # --- 5. TEST RUN: copy test files, run suite ---
 for f in $TEST_FILES; do
     mkdir -p "$(dirname "$WORKDIR/$f")"
@@ -112,6 +131,7 @@ EXERCISE_NAME=$(basename "$EXERCISE_REL")
 python3 -c "
 import json
 parsed = json.load(open('$OUTPUT/parsed-metrics.json'))
+proxy = json.load(open('$OUTPUT/proxy-analysis.json'))
 result = {
     'harness': '$HARNESS',
     'model': '$MODEL_NAME',
@@ -131,6 +151,13 @@ result = {
     'llm_calls': parsed.get('llm_calls', 0),
     'duration_sec': $DURATION,
     'diff_loc': $DIFF_LOC,
+    'cache_write_tokens': proxy.get('cache_write_tokens', 0),
+    'cache_read_tokens': proxy.get('cache_read_tokens', 0),
+    'system_prompt_tokens': proxy.get('system_prompt_tokens', 0),
+    'tool_schema_tokens': proxy.get('tool_schema_tokens', 0),
+    'prefix_stable': proxy.get('prefix_stable', True),
+    'prefix_variants': proxy.get('prefix_variants', 0),
+    'request_count': proxy.get('request_count', 0),
 }
 print(json.dumps(result))
 "

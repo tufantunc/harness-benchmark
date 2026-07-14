@@ -121,6 +121,12 @@ def run_single(
         timed_out=metrics.get("timed_out", False),
         tampered=metrics.get("tampered", False),
         artifact_path=f"artifacts/{harness}/{exercise.language}/{exercise.name}/rep-{repetition}",
+        cache_write_tokens=metrics.get("cache_write_tokens", 0),
+        cache_read_tokens=metrics.get("cache_read_tokens", 0),
+        system_prompt_tokens=metrics.get("system_prompt_tokens", 0),
+        tool_schema_tokens=metrics.get("tool_schema_tokens", 0),
+        prefix_stable=metrics.get("prefix_stable", True),
+        request_count=metrics.get("request_count", 0),
     )
     store.upsert(run_result)
 

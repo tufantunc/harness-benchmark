@@ -35,6 +35,12 @@ def compute_leaderboard(store: Store, model: str | None = None, language: str | 
         tokens = [r.tokens_input + r.tokens_output for r in successes] if successes else [0]
         durations = [r.duration_sec for r in results] if results else [0.0]
         tool_calls = [r.tool_calls for r in results] if results else [0]
+        cache_writes = [r.cache_write_tokens for r in results] if results else [0]
+        cache_reads = [r.cache_read_tokens for r in results] if results else [0]
+        sys_prompt = [r.system_prompt_tokens for r in results] if results else [0]
+        tool_schemas = [r.tool_schema_tokens for r in results] if results else [0]
+        requests = [r.request_count for r in results] if results else [0]
+        stable_count = sum(1 for r in results if r.prefix_stable)
 
         entries.append({
             "harness": harness,
@@ -45,6 +51,12 @@ def compute_leaderboard(store: Store, model: str | None = None, language: str | 
             "tokens_per_success": round(statistics.mean(tokens)) if tokens else 0,
             "avg_duration": round(statistics.mean(durations), 1) if durations else 0.0,
             "avg_tool_calls": round(statistics.mean(tool_calls), 1) if tool_calls else 0.0,
+            "avg_cache_write": round(statistics.mean(cache_writes)) if cache_writes else 0,
+            "avg_cache_read": round(statistics.mean(cache_reads)) if cache_reads else 0,
+            "avg_sys_prompt_tokens": round(statistics.mean(sys_prompt)) if sys_prompt else 0,
+            "avg_tool_schema_tokens": round(statistics.mean(tool_schemas)) if tool_schemas else 0,
+            "prefix_stable_rate": round(stable_count / total, 4) if total > 0 else 0.0,
+            "avg_requests": round(statistics.mean(requests), 1) if requests else 0,
         })
 
     entries.sort(key=lambda e: (
@@ -64,15 +76,32 @@ def generate_markdown(leaderboard: list[dict], model: str) -> str:
     lines = [
         f"# Leaderboard — {model}",
         "",
-        "| Rank | Harness | Tasks | Success | pass@k | Tokens/Success | Cost/Task | Avg Time | Avg Tools |",
-        "|------|---------|-------|---------|--------|----------------|-----------|----------|-----------|",
+        "## Summary",
+        "",
+        "| Rank | Harness | Tasks | Success | pass@k | Tokens/Success | Cost/Task | Avg Time | Avg Requests |",
+        "|------|---------|-------|---------|--------|----------------|-----------|----------|--------------|",
     ]
     for e in leaderboard:
         lines.append(
             f"| {e['rank']} | {e['harness']} | {e['total_tasks']} | "
             f"{e['success_rate']:.1%} | {e['pass_at_k']:.1%} | "
             f"{e['tokens_per_success']:,} | ${e['avg_cost_per_task']:.4f} | "
-            f"{e['avg_duration']:.0f}s | {e['avg_tool_calls']:.1f} |"
+            f"{e['avg_duration']:.0f}s | {e['avg_requests']:.1f} |"
+        )
+
+    lines.extend([
+        "",
+        "## Cache & Overhead",
+        "",
+        "| Harness | Cache Write | Cache Read | Sys Prompt | Tool Schemas | Prefix Stable |",
+        "|---------|-------------|------------|------------|--------------|---------------|",
+    ])
+    for e in leaderboard:
+        lines.append(
+            f"| {e['harness']} | "
+            f"{e['avg_cache_write']:,} | {e['avg_cache_read']:,} | "
+            f"{e['avg_sys_prompt_tokens']:,} | {e['avg_tool_schema_tokens']:,} | "
+            f"{e['prefix_stable_rate']:.0%} |"
         )
     lines.append("")
     return "\n".join(lines)

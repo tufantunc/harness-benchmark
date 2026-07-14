@@ -27,6 +27,12 @@ class RunResult:
     timed_out: bool
     tampered: bool
     artifact_path: str
+    cache_write_tokens: int = 0
+    cache_read_tokens: int = 0
+    system_prompt_tokens: int = 0
+    tool_schema_tokens: int = 0
+    prefix_stable: bool = True
+    request_count: int = 0
 
 
 SCHEMA = """
@@ -55,6 +61,15 @@ CREATE TABLE IF NOT EXISTS runs (
 );
 """
 
+MIGRATIONS = {
+    "cache_write_tokens": "INTEGER NOT NULL DEFAULT 0",
+    "cache_read_tokens": "INTEGER NOT NULL DEFAULT 0",
+    "system_prompt_tokens": "INTEGER NOT NULL DEFAULT 0",
+    "tool_schema_tokens": "INTEGER NOT NULL DEFAULT 0",
+    "prefix_stable": "BOOLEAN NOT NULL DEFAULT 1",
+    "request_count": "INTEGER NOT NULL DEFAULT 0",
+}
+
 
 class Store:
     def __init__(self, db_path: Path):
@@ -64,6 +79,10 @@ class Store:
     def init_schema(self):
         with sqlite3.connect(self.db_path) as conn:
             conn.executescript(SCHEMA)
+            existing = {row[1] for row in conn.execute("PRAGMA table_info(runs)").fetchall()}
+            for col, decl in MIGRATIONS.items():
+                if col not in existing:
+                    conn.execute(f"ALTER TABLE runs ADD COLUMN {col} {decl}")
 
     def upsert(self, result: RunResult):
         with sqlite3.connect(self.db_path) as conn:
@@ -72,8 +91,9 @@ class Store:
                 INSERT INTO runs (run_id, harness, model, language, exercise, repetition,
                     success, tokens_input, tokens_output, tokens_cached, cost_usd,
                     duration_sec, tool_calls, llm_calls, diff_loc, timed_out, tampered,
-                    artifact_path)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    artifact_path, cache_write_tokens, cache_read_tokens,
+                    system_prompt_tokens, tool_schema_tokens, prefix_stable, request_count)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(harness, model, language, exercise, repetition)
                 DO UPDATE SET
                     run_id=excluded.run_id,
@@ -89,6 +109,12 @@ class Store:
                     timed_out=excluded.timed_out,
                     tampered=excluded.tampered,
                     artifact_path=excluded.artifact_path,
+                    cache_write_tokens=excluded.cache_write_tokens,
+                    cache_read_tokens=excluded.cache_read_tokens,
+                    system_prompt_tokens=excluded.system_prompt_tokens,
+                    tool_schema_tokens=excluded.tool_schema_tokens,
+                    prefix_stable=excluded.prefix_stable,
+                    request_count=excluded.request_count,
                     created_at=CURRENT_TIMESTAMP
                 """,
                 (
@@ -98,6 +124,9 @@ class Store:
                     result.cost_usd, result.duration_sec, result.tool_calls,
                     result.llm_calls, result.diff_loc, result.timed_out,
                     result.tampered, result.artifact_path,
+                    result.cache_write_tokens, result.cache_read_tokens,
+                    result.system_prompt_tokens, result.tool_schema_tokens,
+                    result.prefix_stable, result.request_count,
                 ),
             )
 
@@ -119,7 +148,6 @@ class Store:
             return row is not None and bool(row[0])
 
     def count_by_success(self, harness: str | None = None, model: str | None = None) -> dict[str, int]:
-        """Count results grouped by success/failure."""
         clauses = []
         params = []
         if harness:
@@ -135,6 +163,25 @@ class Store:
                 params,
             ).fetchall()
         return {"success": sum(c for s, c in rows if s), "failed": sum(c for s, c in rows if not s)}
+
+    def _row_to_result(self, r: sqlite3.Row) -> RunResult:
+        return RunResult(
+            run_id=r["run_id"], harness=r["harness"], model=r["model"],
+            language=r["language"], exercise=r["exercise"],
+            repetition=r["repetition"], success=bool(r["success"]),
+            tokens_input=r["tokens_input"], tokens_output=r["tokens_output"],
+            tokens_cached=r["tokens_cached"], cost_usd=r["cost_usd"],
+            duration_sec=r["duration_sec"], tool_calls=r["tool_calls"],
+            llm_calls=r["llm_calls"], diff_loc=r["diff_loc"],
+            timed_out=bool(r["timed_out"]), tampered=bool(r["tampered"]),
+            artifact_path=r["artifact_path"],
+            cache_write_tokens=r["cache_write_tokens"] if "cache_write_tokens" in r.keys() else 0,
+            cache_read_tokens=r["cache_read_tokens"] if "cache_read_tokens" in r.keys() else 0,
+            system_prompt_tokens=r["system_prompt_tokens"] if "system_prompt_tokens" in r.keys() else 0,
+            tool_schema_tokens=r["tool_schema_tokens"] if "tool_schema_tokens" in r.keys() else 0,
+            prefix_stable=bool(r["prefix_stable"]) if "prefix_stable" in r.keys() else True,
+            request_count=r["request_count"] if "request_count" in r.keys() else 0,
+        )
 
     def query(
         self,
@@ -162,23 +209,9 @@ class Store:
                 params,
             ).fetchall()
 
-        return [
-            RunResult(
-                run_id=r["run_id"], harness=r["harness"], model=r["model"],
-                language=r["language"], exercise=r["exercise"],
-                repetition=r["repetition"], success=bool(r["success"]),
-                tokens_input=r["tokens_input"], tokens_output=r["tokens_output"],
-                tokens_cached=r["tokens_cached"], cost_usd=r["cost_usd"],
-                duration_sec=r["duration_sec"], tool_calls=r["tool_calls"],
-                llm_calls=r["llm_calls"], diff_loc=r["diff_loc"],
-                timed_out=bool(r["timed_out"]), tampered=bool(r["tampered"]),
-                artifact_path=r["artifact_path"],
-            )
-            for r in rows
-        ]
+        return [self._row_to_result(r) for r in rows]
 
     def export_json(self) -> list[dict]:
-        import json
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute("SELECT * FROM runs ORDER BY harness, model, language, exercise").fetchall()
