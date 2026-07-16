@@ -163,12 +163,54 @@ def parse_cline_events(lines: list[str]) -> Metrics:
     return m
 
 
+def parse_autohand_events(lines: list[str]) -> Metrics:
+    """Parse autohand -p output.
+
+    Autohand outputs JSON events. Token/cost data is captured by the logging
+    proxy at the API boundary (authoritative source).
+    This parser provides best-effort tool_calls/llm_calls counts.
+
+    NOTE: Event type names are best-guess until a real fixture is captured.
+    """
+    m = Metrics()
+    for evt in _iter_events(lines):
+        evt_type = evt.get("type", "")
+        if evt_type in ("message", "assistant", "response", "llm_response"):
+            usage = evt.get("usage") or evt.get("message", {}).get("usage", {})
+            _accumulate_usage(m, usage)
+        elif evt_type in ("tool_call", "tool_use", "tool_execution", "action", "command"):
+            m.tool_calls += 1
+    return m
+
+
+def parse_kimi_events(lines: list[str]) -> Metrics:
+    """Parse kimi -p output.
+
+    Kimi CLI outputs JSON events. Token/cost data is captured by the logging
+    proxy at the API boundary (authoritative source).
+    This parser provides best-effort tool_calls/llm_calls counts.
+
+    NOTE: Event type names are best-guess until a real fixture is captured.
+    """
+    m = Metrics()
+    for evt in _iter_events(lines):
+        evt_type = evt.get("type", "")
+        if evt_type in ("message", "assistant", "response", "chat_completion"):
+            usage = evt.get("usage") or evt.get("message", {}).get("usage", {})
+            _accumulate_usage(m, usage)
+        elif evt_type in ("tool_call", "tool_use", "function_call", "action"):
+            m.tool_calls += 1
+    return m
+
+
 PARSERS = {
     "pi": parse_pi_events,
     "opencode": parse_opencode_events,
     "grok": parse_grok_events,
     "junie": parse_junie_events,
     "cline": parse_cline_events,
+    "autohand": parse_autohand_events,
+    "kimi": parse_kimi_events,
 }
 
 

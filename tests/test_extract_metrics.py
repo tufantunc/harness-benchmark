@@ -81,3 +81,27 @@ def test_extract_cline_events(fixtures_dir):
     # No usage data in cline events
     assert metrics.tokens_input == 0
     assert metrics.cost_usd == 0.0
+
+
+def test_extract_autohand_events(fixtures_dir):
+    events_file = fixtures_dir / "autohand-events.jsonl"
+    metrics = extract_metrics(events_file, format="autohand")
+
+    assert metrics.llm_calls == 1  # only response has usage
+    assert metrics.tool_calls == 1
+    assert metrics.tokens_input == 2100
+    assert metrics.tokens_output == 280
+    assert metrics.tokens_cached == 6000
+    assert abs(metrics.cost_usd - 0.012) < 0.001
+
+
+def test_extract_kimi_events(fixtures_dir):
+    events_file = fixtures_dir / "kimi-events.jsonl"
+    metrics = extract_metrics(events_file, format="kimi")
+
+    assert metrics.llm_calls == 1  # only response has usage
+    assert metrics.tool_calls == 1
+    assert metrics.tokens_input == 1900
+    assert metrics.tokens_output == 250
+    assert metrics.tokens_cached == 5500
+    assert abs(metrics.cost_usd - 0.011) < 0.001

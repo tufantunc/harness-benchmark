@@ -1,0 +1,24 @@
+# harnesses/autohand/manifest.yaml
+name: autohand
+version: "latest"
+install: curl -fsSL https://autohand.ai/install.sh | bash
+
+invoke:
+  command: autohand -p "$PROMPT" --yes --path "$WORKDIR"
+  model_flag: --model $MODEL_NAME
+
+setup: |
+  mkdir -p ~/.autohand
+  cat > ~/.autohand/config.json <<AUTEOF
+  {
+    "provider": "openai",
+    "openai": {
+      "apiKey": "$API_KEY",
+      "model": "$MODEL_NAME",
+      "baseUrl": "$MODEL_URL"
+    }
+  }
+  AUTEOF
+
+metric_source: events.jsonl
+metric_format: autohand

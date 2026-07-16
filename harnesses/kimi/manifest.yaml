@@ -1,0 +1,28 @@
+# harnesses/kimi/manifest.yaml
+name: kimi
+version: "latest"
+install: npm install -g @moonshot-ai/kimi-cli
+
+invoke:
+  command: kimi -p "$PROMPT" --cwd "$WORKDIR"
+  model_flag: --model $MODEL_NAME
+
+setup: |
+  mkdir -p ~/.kimi
+  cat > ~/.kimi/config.toml <<KIMIEOF
+  [providers.benchmark]
+  type = "openai_legacy"
+  base_url = "$MODEL_URL"
+  api_key = "$API_KEY"
+
+  [models.benchmark-glm]
+  provider = "benchmark"
+  model = "$MODEL_NAME"
+
+  [default]
+  provider = "benchmark"
+  model = "$MODEL_NAME"
+  KIMIEOF
+
+metric_source: events.jsonl
+metric_format: kimi

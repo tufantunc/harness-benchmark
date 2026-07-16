@@ -21,7 +21,15 @@ RUN npm init -y && \
 RUN npm install -g opencode-ai && \
     npm install -g --ignore-scripts @earendil-works/pi-coding-agent && \
     npm install -g @jetbrains/junie && \
-    npm install -g cline
+    npm install -g cline && \
+    npm install -g @kilocode/cli && \
+    npm install -g @moonshot-ai/kimi-cli
+
+# Install Bun then AutoHand Code CLI (requires Bun runtime)
+RUN curl -fsSL https://bun.sh/install | bash && \
+    export PATH="/root/.bun/bin:$PATH" && \
+    curl -fsSL https://autohand.ai/install.sh | bash
+ENV PATH="/root/.bun/bin:${PATH}"
 
 # Install Grok Build (curl installer, not npm)
 # SHA256 pins the installer script for reproducibility — update both when upgrading grok

@@ -1,0 +1,5 @@
+{"type":"session","id":"ah-001"}
+{"type":"message","role":"assistant","content":[{"type":"text","text":"Reading the file..."}]}
+{"type":"tool_call","name":"read_file","args":{"path":"solution.py"}}
+{"type":"tool_result","name":"read_file","content":"def solve():\n    pass"}
+{"type":"response","role":"assistant","content":[{"type":"text","text":"Done!"}],"usage":{"input_tokens":2100,"output_tokens":280,"cache_read_tokens":6000,"cost":{"total":0.012}}}

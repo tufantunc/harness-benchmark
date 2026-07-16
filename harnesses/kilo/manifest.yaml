@@ -1,0 +1,34 @@
+# harnesses/kilo/manifest.yaml
+# Kilo CLI is a fork of OpenCode — same config format and flags
+name: kilo
+version: "latest"
+install: npm install -g @kilocode/cli
+
+invoke:
+  command: kilo run "$PROMPT" --format json --dir "$WORKDIR" --auto
+  model_flag: --model benchmark/$MODEL_NAME
+
+setup: |
+  mkdir -p "$WORKDIR"
+  cat > "$WORKDIR/kilo.json" <<KEOF
+  {
+    "provider": {
+      "benchmark": {
+        "npm": "@ai-sdk/openai-compatible",
+        "name": "benchmark",
+        "options": {
+          "baseURL": "$MODEL_URL",
+          "apiKey": "$API_KEY"
+        },
+        "models": {
+          "$MODEL_NAME": {
+            "name": "$MODEL_NAME"
+          }
+        }
+      }
+    }
+  }
+  KEOF
+
+metric_source: events.jsonl
+metric_format: opencode
