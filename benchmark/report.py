@@ -26,9 +26,9 @@ def compute_leaderboard(store: Store, model: str | None = None, language: str | 
         successes = [r for r in results if r.success]
         success_rate = len(successes) / total if total > 0 else 0.0
 
-        by_exercise: dict[str, list[bool]] = defaultdict(list)
+        by_exercise: dict[tuple, list[bool]] = defaultdict(list)
         for r in results:
-            by_exercise[r.exercise].append(r.success)
+            by_exercise[(r.language, r.exercise)].append(r.success)
         pass_at_k = sum(1 for ex, vals in by_exercise.items() if any(vals)) / len(by_exercise) if by_exercise else 0.0
 
         costs = [r.cost_usd for r in successes] if successes else [0.0]

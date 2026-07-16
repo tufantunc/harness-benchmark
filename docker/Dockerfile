@@ -7,8 +7,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git jq curl ca-certificates unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Python testing tools
-RUN python3 -m pip install --break-system-packages pytest
+# Python testing tools + YAML parser for entrypoint manifest reading
+RUN python3 -m pip install --break-system-packages pytest pyyaml
 
 # JavaScript testing dependencies (shared node_modules for jest + babel)
 RUN mkdir -p /npm-install
@@ -24,13 +24,22 @@ RUN npm install -g opencode-ai && \
     npm install -g cline && \
     npm install -g @kilocode/cli
 
-# Install Kimi Code CLI (curl installer — not on npm)
-RUN curl -fsSL https://code.kimi.com/kimi-code/install.sh | bash
+# Install Kimi Code CLI (curl installer — SHA256 pinned)
+RUN curl -fsSL -o /tmp/kimi-install.sh https://code.kimi.com/kimi-code/install.sh && \
+    echo "638927825e96825edbb563de5e0cb06f8a0551c53e026ade8b717b0f25cb83d2  /tmp/kimi-install.sh" | sha256sum -c - && \
+    bash /tmp/kimi-install.sh && \
+    rm /tmp/kimi-install.sh
 
-# Install Bun then AutoHand Code CLI (requires Bun runtime)
-RUN curl -fsSL https://bun.sh/install | bash && \
+# Install Bun (SHA256 pinned) then AutoHand Code CLI (SHA256 pinned)
+RUN curl -fsSL -o /tmp/bun-install.sh https://bun.sh/install && \
+    echo "bab8acfb046aac8c72407bdcce903957665d655d7acaa3e11c7c4616beae68dd  /tmp/bun-install.sh" | sha256sum -c - && \
+    bash /tmp/bun-install.sh && \
+    rm /tmp/bun-install.sh && \
     export PATH="/root/.bun/bin:$PATH" && \
-    curl -fsSL https://autohand.ai/install.sh | bash
+    curl -fsSL -o /tmp/autohand-install.sh https://autohand.ai/install.sh && \
+    echo "6c6321a005cf62f41a390ee64bc40142225383919621f84e7174ffa718a7fdce  /tmp/autohand-install.sh" | sha256sum -c - && \
+    bash /tmp/autohand-install.sh && \
+    rm /tmp/autohand-install.sh
 ENV PATH="/root/.kimi-code/bin:/root/.bun/bin:${PATH}"
 
 # Install Grok Build (curl installer, not npm)

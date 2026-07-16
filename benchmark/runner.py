@@ -64,9 +64,12 @@ def run_single(
         "/results",
     ]
 
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=config.run.timeout_sec + 120)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=config.run.timeout_sec + 120)
+    except subprocess.TimeoutExpired:
+        result = None
 
-    if result.returncode != 0:
+    if result is None or result.returncode != 0:
         metrics = {
             "harness": harness,
             "model": config.model.name,
@@ -75,8 +78,8 @@ def run_single(
             "repetition": repetition,
             "success": False,
             "test_exit_code": -1,
-            "agent_exit_code": result.returncode,
-            "timed_out": True,
+            "agent_exit_code": -1 if result is None else result.returncode,
+            "timed_out": result is None,
             "tampered": False,
             "tokens_input": 0,
             "tokens_output": 0,

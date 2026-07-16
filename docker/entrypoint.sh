@@ -21,6 +21,18 @@ cd "$WORKDIR"
 git init -q 2>/dev/null || true
 git add -A && git commit -q -m "init" --allow-empty 2>/dev/null || true
 
+# Helper: read a nested key from a YAML manifest using python3+pyyaml
+yaml_get() {
+    python3 -c "
+import yaml, sys
+with open(sys.argv[1]) as f:
+    data = yaml.safe_load(f)
+for key in sys.argv[2].split('.'):
+    data = data.get(key) if isinstance(data, dict) else None
+print(data if data is not None else sys.argv[3])
+" "$1" "$2" "${3:-}" 2>/dev/null
+}
+
 # --- 1. SETUP: copy exercise stub (no test files) ---
 CONFIG_JSON="$EXERCISE_SRC/.meta/config.json"
 SOLUTION_FILES=$(jq -r '.files.solution[]' "$CONFIG_JSON")
@@ -64,7 +76,8 @@ sleep 1
 # Override MODEL_URL to proxy so setup hook generates config pointing at proxy
 export MODEL_URL="http://127.0.0.1:${PROXY_PORT}"
 
-SETUP_SCRIPT=$(jq -r '.setup // empty' "$MANIFEST" 2>/dev/null || true)
+# Read setup hook from YAML manifest (NOT jq — jq is JSON-only)
+SETUP_SCRIPT=$(yaml_get "$MANIFEST" "setup" "")
 if [ -n "$SETUP_SCRIPT" ]; then
     eval "$SETUP_SCRIPT"
 fi
@@ -75,7 +88,7 @@ echo "Modify only the supplied files. Don't rename functions or classes. Only us
 /app/container/assemble_prompt.sh "$WORKDIR" "$WORKDIR/prompt.txt" "$ADDENDUM_FILE"
 
 # --- 4. AGENT INVOKE ---
-MODEL_FLAG=$(jq -r '.invoke.model_flag // "--model benchmark/$MODEL_NAME"' "$MANIFEST" 2>/dev/null || echo "--model benchmark/\$MODEL_NAME")
+MODEL_FLAG=$(yaml_get "$MANIFEST" "invoke.model_flag" "--model benchmark/\$MODEL_NAME")
 MODEL_FLAG=$(eval echo "$MODEL_FLAG")
 
 ADAPTER="$HARNESS_DIR/adapter.sh"
@@ -88,7 +101,7 @@ AGENT_EXIT=$?
 set -e
 
 END_TIME=$(date +%s)
-DURATION=$(echo "$END_TIME - $START_TIME" | bc)
+DURATION=$((END_TIME - START_TIME))
 TIMED_OUT=0
 if [ "$AGENT_EXIT" = 124 ]; then
     TIMED_OUT=1
@@ -101,11 +114,14 @@ wait "$PROXY_PID" 2>/dev/null || true
 node /app/container/analyze-proxy.js "$OUTPUT/captured-payloads" > "$OUTPUT/proxy-analysis.json" 2>/dev/null || \
     echo '{"cache_write_tokens":0,"cache_read_tokens":0,"system_prompt_tokens":0,"tool_schema_tokens":0,"prefix_stable":true,"prefix_variants":0,"request_count":0}' > "$OUTPUT/proxy-analysis.json"
 
-# --- 5. TEST RUN: copy test files, run suite ---
+# --- 5. TEST RUN: copy test files, commit, run suite ---
 for f in $TEST_FILES; do
     mkdir -p "$(dirname "$WORKDIR/$f")"
     cp "$EXERCISE_SRC/$f" "$WORKDIR/$f"
 done
+
+# Commit test files so tamper check can detect modifications via git diff
+git add -A && git commit -q -m "tests added" 2>/dev/null || true
 
 set +e
 /app/container/run_tests.sh "$LANGUAGE" "$WORKDIR" $TEST_FILES > "$OUTPUT/test-output.txt" 2>&1
@@ -114,7 +130,7 @@ set -e
 
 # --- 6. COLLECT ---
 git diff --no-color > "$OUTPUT/diff.patch" 2>/dev/null || true
-DIFF_LOC=$(git diff --shortstat 2>/dev/null | grep -oP '\d+(?= insertion)' || echo "0")
+DIFF_LOC=$(git diff --shortstat 2>/dev/null | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+' || echo "0")
 
 set +e
 /app/container/check_tamper.sh "$WORKDIR" $TEST_FILES > "$OUTPUT/tamper-check.txt" 2>&1
@@ -122,7 +138,7 @@ TAMPER_EXIT=$?
 set -e
 TAMPERED=$([ "$TAMPER_EXIT" = "1" ] && echo "true" || echo "false")
 
-METRIC_FORMAT=$(jq -r '.metric_format // "pi"' "$MANIFEST" 2>/dev/null || echo "pi")
+METRIC_FORMAT=$(yaml_get "$MANIFEST" "metric_format" "pi")
 python3 /app/container/extract_metrics.py "$OUTPUT/events.jsonl" "$METRIC_FORMAT" "$OUTPUT/parsed-metrics.json" 2>/dev/null || \
     echo '{"tokens_input":0,"tokens_output":0,"tokens_cached":0,"cost_usd":0.0,"tool_calls":0,"llm_calls":0}' > "$OUTPUT/parsed-metrics.json"
 

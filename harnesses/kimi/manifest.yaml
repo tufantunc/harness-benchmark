@@ -8,8 +8,8 @@ invoke:
   model_flag: --model $MODEL_NAME
 
 setup: |
-  mkdir -p ~/.kimi
-  cat > ~/.kimi/config.toml <<KIMIEOF
+  mkdir -p ~/.kimi-code
+  cat > ~/.kimi-code/config.toml <<KIMIEOF
   [providers.benchmark]
   type = "openai_legacy"
   base_url = "$MODEL_URL"

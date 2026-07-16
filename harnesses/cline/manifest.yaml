@@ -12,7 +12,8 @@ setup: |
   cat > ~/.cline/data/settings/providers.json <<CLINEEOF
   {
     "openai": {
-      "baseUrl": "$MODEL_URL"
+      "baseUrl": "$MODEL_URL",
+      "apiKey": "$API_KEY"
     }
   }
   CLINEEOF

@@ -14,7 +14,6 @@ cline "$PROMPT" \
     -P openai \
     $MODEL_FLAG \
     -c "$WORKDIR" \
-    -k "$API_KEY" \
     > /output/events.jsonl 2>/output/agent-stderr.log
 
 echo $? > /output/agent-exit-code
