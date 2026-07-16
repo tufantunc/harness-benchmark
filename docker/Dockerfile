@@ -4,7 +4,7 @@ FROM node:22-slim
 # System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip python3-venv \
-    git jq curl ca-certificates \
+    git jq curl ca-certificates unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Python testing tools
@@ -22,14 +22,16 @@ RUN npm install -g opencode-ai && \
     npm install -g --ignore-scripts @earendil-works/pi-coding-agent && \
     npm install -g @jetbrains/junie && \
     npm install -g cline && \
-    npm install -g @kilocode/cli && \
-    npm install -g @moonshot-ai/kimi-cli
+    npm install -g @kilocode/cli
+
+# Install Kimi Code CLI (curl installer — not on npm)
+RUN curl -fsSL https://code.kimi.com/kimi-code/install.sh | bash
 
 # Install Bun then AutoHand Code CLI (requires Bun runtime)
 RUN curl -fsSL https://bun.sh/install | bash && \
     export PATH="/root/.bun/bin:$PATH" && \
     curl -fsSL https://autohand.ai/install.sh | bash
-ENV PATH="/root/.bun/bin:${PATH}"
+ENV PATH="/root/.kimi-code/bin:/root/.bun/bin:${PATH}"
 
 # Install Grok Build (curl installer, not npm)
 # SHA256 pins the installer script for reproducibility — update both when upgrading grok

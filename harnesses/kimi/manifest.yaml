@@ -1,7 +1,7 @@
 # harnesses/kimi/manifest.yaml
 name: kimi
 version: "latest"
-install: npm install -g @moonshot-ai/kimi-cli
+install: curl -fsSL https://code.kimi.com/kimi-code/install.sh | bash
 
 invoke:
   command: kimi -p "$PROMPT" --cwd "$WORKDIR"
