@@ -19,7 +19,9 @@ RUN npm init -y && \
 
 # Install harness CLIs globally
 RUN npm install -g opencode-ai && \
-    npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+    npm install -g --ignore-scripts @earendil-works/pi-coding-agent && \
+    npm install -g @jetbrains/junie && \
+    npm install -g cline
 
 # Install Grok Build (curl installer, not npm)
 # SHA256 pins the installer script for reproducibility — update both when upgrading grok

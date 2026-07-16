@@ -116,10 +116,59 @@ def parse_grok_events(lines: list[str]) -> Metrics:
     return m
 
 
+def parse_junie_events(lines: list[str]) -> Metrics:
+    """Parse junie --output-format json output.
+
+    Junie outputs JSON events. Token/cost data is captured by the logging
+    proxy at the API boundary (authoritative source).
+    This parser provides best-effort tool_calls/llm_calls counts.
+
+    NOTE: Event type names are best-guess until a real fixture is captured.
+    """
+    m = Metrics()
+    for evt in _iter_events(lines):
+        evt_type = evt.get("type", "")
+        if evt_type in ("message", "assistant", "response"):
+            usage = evt.get("usage") or evt.get("message", {}).get("usage", {})
+            _accumulate_usage(m, usage)
+        elif evt_type in ("tool_call", "tool_use", "tool_execution", "command"):
+            m.tool_calls += 1
+    return m
+
+
+def parse_cline_events(lines: list[str]) -> Metrics:
+    """Parse cline --json output.
+
+    Cline outputs {"type":"say","text":"...","ts":...,"say":"text"} messages.
+    No usage/token data in events — the logging proxy is the sole source.
+    This parser provides best-effort tool_calls/llm_calls counts.
+
+    NOTE: Cline's "say" subtypes are best-guess for tool detection.
+    """
+    m = Metrics()
+    for evt in _iter_events(lines):
+        evt_type = evt.get("type", "")
+        say_sub = evt.get("say", "")
+
+        if evt_type == "say" and say_sub in ("text", "reasoning"):
+            usage = evt.get("usage")
+            if usage:
+                _accumulate_usage(m, usage)
+            else:
+                m.llm_calls += 1
+        elif evt_type == "say" and say_sub in ("tool", "command", "completion_result"):
+            m.tool_calls += 1
+        elif evt_type == "ask" and evt.get("ask", "") == "tool":
+            m.tool_calls += 1
+    return m
+
+
 PARSERS = {
     "pi": parse_pi_events,
     "opencode": parse_opencode_events,
     "grok": parse_grok_events,
+    "junie": parse_junie_events,
+    "cline": parse_cline_events,
 }
 
 

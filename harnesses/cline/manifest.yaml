@@ -1,0 +1,21 @@
+# harnesses/cline/manifest.yaml
+name: cline
+version: "latest"
+install: npm install -g cline
+
+invoke:
+  command: cline "$PROMPT" --json --auto-approve true
+  model_flag: --model benchmark/$MODEL_NAME
+
+setup: |
+  mkdir -p ~/.cline/data/settings
+  cat > ~/.cline/data/settings/providers.json <<CLINEEOF
+  {
+    "openai": {
+      "baseUrl": "$MODEL_URL"
+    }
+  }
+  CLINEEOF
+
+metric_source: events.jsonl
+metric_format: cline

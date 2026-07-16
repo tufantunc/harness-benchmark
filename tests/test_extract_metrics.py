@@ -55,3 +55,29 @@ def test_grok_message_without_usage_not_counted(tmp_path):
 
     assert metrics.llm_calls == 0
     assert metrics.tool_calls == 0
+
+
+def test_extract_junie_events(fixtures_dir):
+    events_file = fixtures_dir / "junie-events.jsonl"
+    metrics = extract_metrics(events_file, format="junie")
+
+    # response + task_result have usage
+    assert metrics.llm_calls == 1  # only response has usage dict
+    assert metrics.tool_calls == 1
+    assert metrics.tokens_input == 2800
+    assert metrics.tokens_output == 320
+    assert metrics.tokens_cached == 7500
+    assert abs(metrics.cost_usd - 0.015) < 0.001
+
+
+def test_extract_cline_events(fixtures_dir):
+    events_file = fixtures_dir / "cline-events.jsonl"
+    metrics = extract_metrics(events_file, format="cline")
+
+    # 3 "say text" messages (no usage) = 3 llm_calls
+    assert metrics.llm_calls == 3
+    # 2 "say tool" messages = 2 tool_calls
+    assert metrics.tool_calls == 2
+    # No usage data in cline events
+    assert metrics.tokens_input == 0
+    assert metrics.cost_usd == 0.0

@@ -1,0 +1,22 @@
+# harnesses/junie/manifest.yaml
+name: junie
+version: "latest"
+install: npm install -g @jetbrains/junie
+
+invoke:
+  command: junie --skip-update-check --model custom:benchmark --project "$WORKDIR" --output-format json
+  model_flag: --model custom:benchmark
+
+setup: |
+  mkdir -p "$WORKDIR/.junie/models"
+  cat > "$WORKDIR/.junie/models/benchmark.json" <<JUNIEEOF
+  {
+    "baseUrl": "$MODEL_URL/chat/completions",
+    "id": "$MODEL_NAME",
+    "apiType": "OpenAICompletion",
+    "apiKey": "${LLM_API_KEY}"
+  }
+  JUNIEEOF
+
+metric_source: events.jsonl
+metric_format: junie
