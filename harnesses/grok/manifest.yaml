@@ -1,0 +1,27 @@
+# harnesses/grok/manifest.yaml
+name: grok
+version: "latest"
+install: curl -fsSL https://x.ai/cli/install.sh | bash
+
+invoke:
+  command: grok --no-auto-update -p "$PROMPT" --output-format streaming-json --always-approve
+  model_flag: -m benchmark
+
+setup: |
+  mkdir -p ~/.grok
+  cat > ~/.grok/config.toml <<GROKEOF
+  [model.benchmark]
+  model = "$MODEL_NAME"
+  base_url = "$MODEL_URL"
+  name = "benchmark"
+  env_key = "LLM_API_KEY"
+
+  [models]
+  default = "benchmark"
+
+  [cli]
+  auto_update = false
+  GROKEOF
+
+metric_source: events.jsonl
+metric_format: grok

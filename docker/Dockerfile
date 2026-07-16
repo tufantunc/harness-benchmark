@@ -21,6 +21,9 @@ RUN npm init -y && \
 RUN npm install -g opencode-ai && \
     npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 
+# Install Grok Build (curl installer, not npm)
+RUN curl -fsSL https://x.ai/cli/install.sh | bash
+
 # Copy container helpers
 COPY container/ /app/container/
 COPY docker/entrypoint.sh /app/entrypoint.sh

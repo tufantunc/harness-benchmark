@@ -19,7 +19,7 @@ run:
   retry_failed: false
   parallel: 1
 
-harnesses: [opencode, pi]
+harnesses: [opencode, pi, grok]
 
 docker:
   image: harness:latest

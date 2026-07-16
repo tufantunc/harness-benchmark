@@ -89,9 +89,55 @@ def parse_opencode_events(lines: list[str]) -> Metrics:
     return m
 
 
+def parse_grok_events(lines: list[str]) -> Metrics:
+    """Parse grok --output-format streaming-json output.
+
+    Grok emits newline-delimited JSON events. Token/cost data is captured
+    by the logging proxy at the API boundary (authoritative source).
+    This parser provides best-effort tool_calls/llm_calls counts.
+    """
+    m = Metrics()
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            evt = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+
+        evt_type = evt.get("type", "")
+
+        # Grok streaming-json events: look for assistant messages and tool calls
+        if evt_type in ("message", "assistant_message", "response", "turn_end"):
+            m.llm_calls += 1
+            usage = evt.get("usage") or evt.get("message", {}).get("usage", {})
+            if usage:
+                m.tokens_input += usage.get("input_tokens", usage.get("input", 0))
+                m.tokens_output += usage.get("output_tokens", usage.get("output", 0))
+                m.tokens_cached += usage.get("cache_read_tokens",
+                                            usage.get("cached_tokens", 0))
+                cost = usage.get("cost", {})
+                if isinstance(cost, dict):
+                    m.cost_usd += cost.get("total", 0.0)
+
+        # Tool call patterns
+        if evt_type in ("tool_call", "tool_use", "tool_execution", "action"):
+            m.tool_calls += 1
+        # Some events nest tool calls in content
+        content = evt.get("content", [])
+        if isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict) and block.get("type") in ("tool_use", "tool_call"):
+                    m.tool_calls += 1
+
+    return m
+
+
 PARSERS = {
     "pi": parse_pi_events,
     "opencode": parse_opencode_events,
+    "grok": parse_grok_events,
 }
 
 
