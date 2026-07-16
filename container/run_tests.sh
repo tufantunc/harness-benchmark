@@ -15,7 +15,7 @@ cd "$WORKDIR"
 case "$LANGUAGE" in
     python)
         for tf in "${TEST_FILES[@]}"; do
-            python -m pytest "$tf" --tb=short -q
+            python3 -m pytest "$tf" --tb=short -q
         done
         ;;
     javascript)

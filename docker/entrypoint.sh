@@ -136,7 +136,7 @@ set +e
 /app/container/check_tamper.sh "$WORKDIR" $TEST_FILES > "$OUTPUT/tamper-check.txt" 2>&1
 TAMPER_EXIT=$?
 set -e
-TAMPERED=$([ "$TAMPER_EXIT" = "1" ] && echo "true" || echo "false")
+TAMPERED=$([ "$TAMPER_EXIT" = "1" ] && echo "True" || echo "False")
 
 METRIC_FORMAT=$(yaml_get "$MANIFEST" "metric_format" "pi")
 python3 /app/container/extract_metrics.py "$OUTPUT/events.jsonl" "$METRIC_FORMAT" "$OUTPUT/parsed-metrics.json" 2>/dev/null || \
