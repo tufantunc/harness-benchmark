@@ -21,71 +21,77 @@ class Metrics:
         return asdict(self)
 
 
-def parse_pi_events(lines: list[str]) -> Metrics:
-    """Parse pi --mode json output."""
-    m = Metrics()
+def _iter_events(lines: list[str]):
+    """Yield parsed JSON objects from newline-delimited JSON lines."""
     for line in lines:
         line = line.strip()
         if not line:
             continue
         try:
-            evt = json.loads(line)
+            yield json.loads(line)
         except json.JSONDecodeError:
             continue
 
+
+def _accumulate_usage(m: Metrics, usage: dict) -> bool:
+    """Accumulate token/cost from a usage dict.
+
+    Handles all known key variants across harnesses:
+      input_tokens | input, output_tokens | output,
+      cache_read_tokens | cached_tokens | cacheRead,
+      cost: {total: N} | total_cost: {total: N} | cost: N (numeric)
+
+    Returns True if usage was non-empty (i.e., an LLM call was made).
+    """
+    if not usage:
+        return False
+    m.llm_calls += 1
+    m.tokens_input += usage.get("input_tokens", usage.get("input", 0))
+    m.tokens_output += usage.get("output_tokens", usage.get("output", 0))
+    m.tokens_cached += usage.get(
+        "cache_read_tokens",
+        usage.get("cached_tokens",
+        usage.get("cacheRead", 0))
+    )
+    cost = usage.get("cost") or usage.get("total_cost", {})
+    if isinstance(cost, dict):
+        m.cost_usd += cost.get("total", 0.0)
+    elif isinstance(cost, (int, float)):
+        m.cost_usd += cost
+    return True
+
+
+def parse_pi_events(lines: list[str]) -> Metrics:
+    """Parse pi --mode json output.
+
+    AssistantMessage events contain a usage object with token/cost data.
+    tool_execution_start events indicate tool calls.
+    """
+    m = Metrics()
+    for evt in _iter_events(lines):
         evt_type = evt.get("type")
         if evt_type in ("message_start", "message_end"):
             msg = evt.get("message", {})
             if msg.get("role") == "assistant":
-                m.llm_calls += 1
-                usage = msg.get("usage", {})
-                m.tokens_input += usage.get("input", 0)
-                m.tokens_output += usage.get("output", 0)
-                m.tokens_cached += usage.get("cacheRead", 0)
-                cost = usage.get("cost", {})
-                m.cost_usd += cost.get("total", 0.0)
+                _accumulate_usage(m, msg.get("usage", {}))
                 for block in msg.get("content", []):
                     if isinstance(block, dict) and block.get("type") == "toolCall":
                         m.tool_calls += 1
-
         elif evt_type == "tool_execution_start":
             m.tool_calls += 1
-
     return m
 
 
 def parse_opencode_events(lines: list[str]) -> Metrics:
     """Parse opencode run --format json output."""
     m = Metrics()
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            evt = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-
+    for evt in _iter_events(lines):
         evt_type = evt.get("type", "")
-
         if evt_type in ("message", "message_end", "assistant"):
             usage = evt.get("usage") or evt.get("message", {}).get("usage", {})
-            if usage:
-                m.llm_calls += 1
-                m.tokens_input += usage.get("input_tokens", usage.get("input", 0))
-                m.tokens_output += usage.get("output_tokens", usage.get("output", 0))
-                m.tokens_cached += usage.get("cache_read_tokens",
-                                            usage.get("cached_tokens",
-                                            usage.get("cacheRead", 0)))
-                cost = usage.get("cost") or usage.get("total_cost", {})
-                if isinstance(cost, dict):
-                    m.cost_usd += cost.get("total", 0.0)
-                elif isinstance(cost, (int, float)):
-                    m.cost_usd += cost
-
-        if evt_type in ("tool_start", "tool_call", "tool_execution_start"):
+            _accumulate_usage(m, usage)
+        elif evt_type in ("tool_start", "tool_call", "tool_execution_start"):
             m.tool_calls += 1
-
     return m
 
 
@@ -95,42 +101,18 @@ def parse_grok_events(lines: list[str]) -> Metrics:
     Grok emits newline-delimited JSON events. Token/cost data is captured
     by the logging proxy at the API boundary (authoritative source).
     This parser provides best-effort tool_calls/llm_calls counts.
+
+    NOTE: Event type names are best-guess until a real fixture is captured.
+    Replace with observed types once a grok-events.jsonl sample is available.
     """
     m = Metrics()
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            evt = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-
+    for evt in _iter_events(lines):
         evt_type = evt.get("type", "")
-
-        # Grok streaming-json events: look for assistant messages and tool calls
         if evt_type in ("message", "assistant_message", "response", "turn_end"):
-            m.llm_calls += 1
             usage = evt.get("usage") or evt.get("message", {}).get("usage", {})
-            if usage:
-                m.tokens_input += usage.get("input_tokens", usage.get("input", 0))
-                m.tokens_output += usage.get("output_tokens", usage.get("output", 0))
-                m.tokens_cached += usage.get("cache_read_tokens",
-                                            usage.get("cached_tokens", 0))
-                cost = usage.get("cost", {})
-                if isinstance(cost, dict):
-                    m.cost_usd += cost.get("total", 0.0)
-
-        # Tool call patterns
-        if evt_type in ("tool_call", "tool_use", "tool_execution", "action"):
+            _accumulate_usage(m, usage)
+        elif evt_type in ("tool_call", "tool_use", "tool_execution", "action"):
             m.tool_calls += 1
-        # Some events nest tool calls in content
-        content = evt.get("content", [])
-        if isinstance(content, list):
-            for block in content:
-                if isinstance(block, dict) and block.get("type") in ("tool_use", "tool_call"):
-                    m.tool_calls += 1
-
     return m
 
 

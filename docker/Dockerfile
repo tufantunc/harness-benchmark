@@ -22,7 +22,12 @@ RUN npm install -g opencode-ai && \
     npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 
 # Install Grok Build (curl installer, not npm)
-RUN curl -fsSL https://x.ai/cli/install.sh | bash
+# SHA256 pins the installer script for reproducibility — update both when upgrading grok
+RUN curl -fsSL -o /tmp/grok-install.sh https://x.ai/cli/install.sh && \
+    echo "5b74aa23e096d798a28a526c57daf5506eb2597de73ab7c37f742db20fcdbfb7  /tmp/grok-install.sh" | sha256sum -c - && \
+    bash /tmp/grok-install.sh && \
+    rm /tmp/grok-install.sh && \
+    grok --version
 
 # Copy container helpers
 COPY container/ /app/container/
