@@ -83,14 +83,26 @@ def parse_pi_events(lines: list[str]) -> Metrics:
 
 
 def parse_opencode_events(lines: list[str]) -> Metrics:
-    """Parse opencode run --format json output."""
+    """Parse opencode run --format json output.
+
+    opencode emits step_start/step_finish/tool_use events.
+    Token data is in step_finish.part.tokens with nested cache object.
+    """
     m = Metrics()
     for evt in _iter_events(lines):
         evt_type = evt.get("type", "")
-        if evt_type in ("message", "message_end", "assistant"):
-            usage = evt.get("usage") or evt.get("message", {}).get("usage", {})
-            _accumulate_usage(m, usage)
-        elif evt_type in ("tool_start", "tool_call", "tool_execution_start"):
+        if evt_type == "step_finish":
+            tokens = evt.get("part", {}).get("tokens", {})
+            if tokens:
+                cache = tokens.get("cache", {})
+                usage = {
+                    "input_tokens": tokens.get("input", 0),
+                    "output_tokens": tokens.get("output", 0),
+                    "cache_read_tokens": cache.get("read", 0),
+                    "cache_write_tokens": cache.get("write", 0),
+                }
+                _accumulate_usage(m, usage)
+        elif evt_type == "tool_use":
             m.tool_calls += 1
     return m
 

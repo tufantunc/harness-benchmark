@@ -43,6 +43,8 @@ if (files.length === 0) {
 
 let totalCacheWrite = 0;
 let totalCacheRead = 0;
+let totalInput = 0;
+let totalOutput = 0;
 const systemHashes = new Set();
 const toolsHashes = new Set();
 let firstSystemTokens = 0;
@@ -94,11 +96,15 @@ for (const file of files) {
             const usage = JSON.parse(fs.readFileSync(usagePath, 'utf8'));
             totalCacheWrite += usage.cache_write_tokens || 0;
             totalCacheRead += usage.cache_read_tokens || 0;
+            totalInput += usage.input_tokens || 0;
+            totalOutput += usage.output_tokens || 0;
         } catch {}
     }
 }
 
 const result = {
+    input_tokens: totalInput,
+    output_tokens: totalOutput,
     cache_write_tokens: totalCacheWrite,
     cache_read_tokens: totalCacheRead,
     system_prompt_tokens: firstSystemTokens,
