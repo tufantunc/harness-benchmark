@@ -103,7 +103,7 @@ function render(model, lang) {
     '<th>Tokens In</th><th>Tokens Out</th><th>LLM Calls</th><th>Tools</th>' +
     '<th>Cost/Run</th><th>Avg Time</th></tr></thead><tbody>';
   entries.forEach((r, i) => {
-    html += '<tr class="harness-row ' + (i===0?'rank-1':'') + '" onclick="toggleDetail('' + r.harness + '')">' +
+    html += '<tr class="harness-row ' + (i===0?'rank-1':'') + '" onclick="toggleDetail(\'' + r.harness + '\')">' +
       '<td>' + (i+1) + '</td><td>' + r.harness + '</td><td>' + r.total + '</td>' +
       '<td>' + pct(r.successRate) + '</td><td>' + pct(r.passK) + '</td>' +
       '<td>' + fmt(r.avgIn) + '</td><td>' + fmt(r.avgOut) + '</td>' +
