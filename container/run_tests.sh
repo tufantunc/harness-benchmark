@@ -19,7 +19,6 @@ case "$LANGUAGE" in
         done
         ;;
     javascript)
-        sed -i 's/\bxtest(/test(/g' ./*.spec.js 2>/dev/null || true
         npm run test 2>&1
         ;;
     *)

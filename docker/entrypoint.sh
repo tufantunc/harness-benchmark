@@ -114,13 +114,21 @@ wait "$PROXY_PID" 2>/dev/null || true
 node /app/container/analyze-proxy.js "$OUTPUT/captured-payloads" > "$OUTPUT/proxy-analysis.json" 2>/dev/null || \
     echo '{"cache_write_tokens":0,"cache_read_tokens":0,"system_prompt_tokens":0,"tool_schema_tokens":0,"prefix_stable":true,"prefix_variants":0,"request_count":0}' > "$OUTPUT/proxy-analysis.json"
 
-# --- 5. TEST RUN: copy test files, commit, run suite ---
+# --- 5. TEST RUN: copy test files, setup, run suite ---
 for f in $TEST_FILES; do
     mkdir -p "$(dirname "$WORKDIR/$f")"
     cp "$EXERCISE_SRC/$f" "$WORKDIR/$f"
 done
 
-# Commit test files so tamper check can detect modifications via git diff
+# JS: link node_modules + transform xtest→test BEFORE commit (so tamper check has clean baseline)
+if [ "$LANGUAGE" = "javascript" ]; then
+    cd "$WORKDIR"
+    [ ! -e node_modules ] && ln -s /npm-install/node_modules . 2>/dev/null || true
+    [ ! -e package-lock.json ] && ln -s /npm-install/package-lock.json . 2>/dev/null || true
+    sed -i 's/\bxtest(/test(/g' ./*.spec.js 2>/dev/null || true
+fi
+
+# Commit test files (baseline for tamper check)
 git add -A && git commit -q -m "tests added" 2>/dev/null || true
 
 set +e
