@@ -114,16 +114,27 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>harness-benchmark — Leaderboard</title>
 <style>
-  body {{ font-family: -apple-system, system-ui, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1.5rem; color: #1a1a1a; }}
-  h1 {{ font-size: 1.6rem; }}
-  table {{ border-collapse: collapse; width: 100%; margin: 1rem 0; }}
-  th, td {{ border: 1px solid #ddd; padding: 0.5rem 0.75rem; text-align: left; }}
-  th {{ background: #f5f5f5; font-weight: 600; }}
-  tr:nth-child(even) {{ background: #fafafa; }}
-  .rank-1 {{ font-weight: bold; }}
-  .muted {{ color: #666; }}
-  .controls {{ margin: 1rem 0; }}
-  select {{ padding: 0.25rem 0.5rem; }}
+  body { font-family: -apple-system, system-ui, sans-serif; max-width: 1100px; margin: 2rem auto; padding: 0 1.5rem; color: #1a1a1a; }
+  h1 { font-size: 1.6rem; }
+  h2 { font-size: 1.2rem; margin-top: 2rem; }
+  table { border-collapse: collapse; width: 100%; margin: 0.5rem 0 1.5rem; font-size: 0.9rem; }
+  th, td { border: 1px solid #ddd; padding: 0.4rem 0.6rem; text-align: left; white-space: nowrap; }
+  th { background: #f0f0f0; font-weight: 600; cursor: pointer; }
+  th:hover { background: #e0e0e0; }
+  tr:nth-child(even) { background: #fafafa; }
+  .rank-1 { font-weight: bold; }
+  .pass { color: #16a34a; font-weight: 600; }
+  .fail { color: #dc2626; }
+  .muted { color: #666; }
+  .controls { margin: 1rem 0; display: flex; gap: 1rem; align-items: center; }
+  select { padding: 0.3rem 0.5rem; }
+  .harness-row:hover { background: #e8f0fe; cursor: pointer; }
+  .detail-row { display: none; }
+  .detail-row.show { display: table-row; }
+  .badge { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; }
+  .badge-yes { background: #dcfce7; color: #166534; }
+  .badge-no { background: #fee2e2; color: #991b1b; }
+  .stab { color: #2563eb; }
 </style>
 </head>
 <body>
@@ -139,57 +150,157 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   </select></label>
 </div>
 
-<div id="leaderboard"></div>
+<div id="summary"></div>
+<div id="cache"></div>
+<div id="detail"></div>
 
 <script>
-const DATA = {data};
+const DATA = __DATA_PLACEHOLDER__;
 
-function render(model, lang) {{
+function aggregate(items) {
+  const total = items.length;
+  const succ = items.filter(i => i.success);
+  // pass@k: group by (language, exercise), any rep succeeded
+  const byEx = {};
+  items.forEach(i => {
+    const k = i.language + '/' + i.exercise;
+    if (!byEx[k]) byEx[k] = false;
+    if (i.success) byEx[k] = true;
+  });
+  const exKeys = Object.keys(byEx);
+  const passK = exKeys.length ? exKeys.filter(k => byEx[k]).length / exKeys.length : 0;
+  const avg = (f) => total ? f / total : 0;
+  return {
+    total, passK,
+    successRate: succ.length / total,
+    avgIn: avg(items.reduce((s,i) => s + (i.tokens_input||0), 0)),
+    avgOut: avg(items.reduce((s,i) => s + (i.tokens_output||0), 0)),
+    avgCached: avg(items.reduce((s,i) => s + (i.tokens_cached||0), 0)),
+    avgCost: avg(items.reduce((s,i) => s + (i.cost_usd||0), 0)),
+    avgLLM: avg(items.reduce((s,i) => s + (i.llm_calls||0), 0)),
+    avgTools: avg(items.reduce((s,i) => s + (i.tool_calls||0), 0)),
+    avgDur: avg(items.reduce((s,i) => s + (i.duration_sec||0), 0)),
+    avgCacheWrite: avg(items.reduce((s,i) => s + (i.cache_write_tokens||0), 0)),
+    avgCacheRead: avg(items.reduce((s,i) => s + (i.cache_read_tokens||0), 0)),
+    avgSysPrompt: avg(items.reduce((s,i) => s + (i.system_prompt_tokens||0), 0)),
+    avgToolSchema: avg(items.reduce((s,i) => s + (i.tool_schema_tokens||0), 0)),
+    avgRequests: avg(items.reduce((s,i) => s + (i.request_count||0), 0)),
+    stableRate: items.filter(i => i.prefix_stable).length / total,
+  };
+}
+
+function fmt(n) { return Math.round(n).toLocaleString(); }
+function pct(n) { return (n * 100).toFixed(1) + '%'; }
+function money(n) { return '$' + n.toFixed(4); }
+
+function render(model, lang) {
   const filtered = DATA.filter(e => (!model || e.model === model) && (!lang || e.language === lang));
-  const byHarness = {{}};
-  filtered.forEach(e => {{
+  const byHarness = {};
+  filtered.forEach(e => {
     if (!byHarness[e.harness]) byHarness[e.harness] = [];
     byHarness[e.harness].push(e);
-  }});
-  const rows = Object.entries(byHarness).map(([harness, items]) => {{
-    const total = items.length;
-    const succ = items.filter(i => i.success).length;
-    return {{
-      harness, total,
-      success_rate: total ? (succ / total) : 0,
-      avg_cost: total ? (items.reduce((s,i) => s + i.cost_usd, 0) / total) : 0,
-      avg_tokens: total ? Math.round(items.reduce((s,i) => s + i.tokens_input + i.tokens_output, 0) / total) : 0,
-      avg_duration: total ? Math.round(items.reduce((s,i) => s + i.duration_sec, 0) / total) : 0,
-    }};
-  }});
-  rows.sort((a, b) => b.success_rate - a.success_rate || a.avg_tokens - b.avg_tokens);
+  });
 
-  let html = '<table><thead><tr><th>Rank</th><th>Harness</th><th>Tasks</th><th>Success</th><th>Tokens/Run</th><th>Cost/Run</th><th>Avg Time</th></tr></thead><tbody>';
-  rows.forEach((r, i) => {{
-    html += `<tr class="${{i === 0 ? 'rank-1' : ''}}"><td>${{i+1}}</td><td>${{r.harness}}</td><td>${{r.total}}</td><td>${{(r.success_rate*100).toFixed(1)}}%</td><td>${{r.avg_tokens.toLocaleString()}}</td><td>$${{r.avg_cost.toFixed(4)}}</td><td>${{r.avg_duration}}s</td></tr>`;
-  }});
+  const entries = Object.entries(byHarness).map(([harness, items]) => ({
+    harness, items, ...aggregate(items)
+  }));
+  entries.sort((a, b) => b.successRate - a.successRate || a.avgIn + a.avgOut - b.avgIn - b.avgOut);
+
+  // Summary table
+  let html = '<h2>Summary</h2><table><thead><tr>' +
+    '<th>#</th><th>Harness</th><th>Tasks</th><th>Success</th><th>pass@k</th>' +
+    '<th>Tokens In</th><th>Tokens Out</th><th>LLM Calls</th><th>Tools</th>' +
+    '<th>Cost/Run</th><th>Avg Time</th></tr></thead><tbody>';
+  entries.forEach((r, i) => {
+    html += '<tr class="harness-row ' + (i===0?'rank-1':'') + '" onclick="toggleDetail(\'' + r.harness + '\')">' +
+      '<td>' + (i+1) + '</td><td>' + r.harness + '</td><td>' + r.total + '</td>' +
+      '<td>' + pct(r.successRate) + '</td><td>' + pct(r.passK) + '</td>' +
+      '<td>' + fmt(r.avgIn) + '</td><td>' + fmt(r.avgOut) + '</td>' +
+      '<td>' + r.avgLLM.toFixed(1) + '</td><td>' + r.avgTools.toFixed(1) + '</td>' +
+      '<td>' + money(r.avgCost) + '</td><td>' + Math.round(r.avgDur) + 's</td></tr>';
+  });
   html += '</tbody></table>';
-  if (rows.length === 0) html = '<p class="muted">No data for this filter.</p>';
-  document.getElementById('leaderboard').innerHTML = html;
-}}
+  document.getElementById('summary').innerHTML = html;
 
-function filter() {{
+  // Cache & Overhead table
+  let cacheHtml = '<h2>Cache & Overhead</h2><table><thead><tr>' +
+    '<th>Harness</th><th>Cache Write</th><th>Cache Read</th>' +
+    '<th>Sys Prompt</th><th>Tool Schemas</th><th>API Reqs</th>' +
+    '<th>Prefix Stable</th></tr></thead><tbody>';
+  entries.forEach(r => {
+    cacheHtml += '<tr><td>' + r.harness + '</td>' +
+      '<td>' + fmt(r.avgCacheWrite) + '</td><td>' + fmt(r.avgCacheRead) + '</td>' +
+      '<td>' + fmt(r.avgSysPrompt) + '</td><td>' + fmt(r.avgToolSchema) + '</td>' +
+      '<td>' + r.avgRequests.toFixed(1) + '</td>' +
+      '<td><span class="badge ' + (r.stableRate > 0.8 ? 'badge-yes' : 'badge-no') + '">' + pct(r.stableRate) + '</span></td></tr>';
+  });
+  cacheHtml += '</tbody></table>';
+  document.getElementById('cache').innerHTML = cacheHtml;
+
+  // Detail placeholder
+  document.getElementById('detail').innerHTML = '';
+}
+
+function toggleDetail(harness) {
+  const el = document.getElementById('detail');
+  if (el.dataset.current === harness) {
+    el.innerHTML = '';
+    el.dataset.current = '';
+    return;
+  }
+  el.dataset.current = harness;
+  const model = document.getElementById('model-select').value;
+  const lang = document.getElementById('lang-select').value;
+  const items = DATA.filter(e => e.harness === harness && (!model || e.model === model) && (!lang || e.language === lang));
+
+  // Group by exercise
+  const byEx = {};
+  items.forEach(i => {
+    const k = i.language + '/' + i.exercise;
+    if (!byEx[k]) byEx[k] = [];
+    byEx[k].push(i);
+  });
+
+  let html = '<h2>' + harness + ' — Per Exercise</h2><table><thead><tr>' +
+    '<th>Exercise</th><th>R1</th><th>R2</th><th>R3</th>' +
+    '<th>Tokens In</th><th>Tokens Out</th><th>LLM</th><th>Tools</th><th>Time</th></tr></thead><tbody>';
+  Object.keys(byEx).sort().forEach(k => {
+    const reps = byEx[k];
+    const anySucc = reps.some(r => r.success);
+    const avgIn = Math.round(reps.reduce((s,r) => s + (r.tokens_input||0), 0) / reps.length);
+    const avgOut = Math.round(reps.reduce((s,r) => s + (r.tokens_output||0), 0) / reps.length);
+    const avgLLM = (reps.reduce((s,r) => s + (r.llm_calls||0), 0) / reps.length).toFixed(0);
+    const avgTools = (reps.reduce((s,r) => s + (r.tool_calls||0), 0) / reps.length).toFixed(0);
+    const avgDur = Math.round(reps.reduce((s,r) => s + r.duration_sec, 0) / reps.length);
+    const cells = [1,2,3].map(n => {
+      const r = reps.find(x => x.repetition === n);
+      return r ? (r.success ? '<span class="pass">PASS</span>' : '<span class="fail">FAIL</span>') : '—';
+    }).join('</td><td>');
+    html += '<tr><td>' + k + '</td><td>' + cells + '</td>' +
+      '<td>' + avgIn.toLocaleString() + '</td><td>' + avgOut.toLocaleString() + '</td>' +
+      '<td>' + avgLLM + '</td><td>' + avgTools + '</td><td>' + avgDur + 's</td></tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function filter() {
   render(document.getElementById('model-select').value, document.getElementById('lang-select').value);
-}}
+}
 
 const models = [...new Set(DATA.map(e => e.model))];
-models.forEach(m => {{
+models.forEach(m => {
   const opt = document.createElement('option');
   opt.value = m; opt.textContent = m;
   document.getElementById('model-select').appendChild(opt);
-}});
+});
 
-if (models.length > 0) {{
+if (models.length > 0) {
   document.getElementById('model-select').value = models[0];
   render(models[0], '');
-}} else {{
+} else {
   render('', '');
-}}
+}
 </script>
 </body>
 </html>"""
@@ -208,7 +319,7 @@ def generate_report(config: Config):
     assets_dir.mkdir(exist_ok=True)
     (assets_dir / "leaderboard-data.json").write_text(json.dumps(raw_data, indent=2))
 
-    html = HTML_TEMPLATE.format(data=json.dumps(raw_data))
+    html = HTML_TEMPLATE.replace("__DATA_PLACEHOLDER__", json.dumps(raw_data))
     (pages_path / "index.html").write_text(html)
 
     if raw_data:
