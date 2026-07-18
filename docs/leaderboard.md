@@ -4,7 +4,7 @@
 
 | Rank | Harness | Tasks | Success | pass@k | Tokens/Success | Cost/Task | Avg Time | Avg Requests |
 |------|---------|-------|---------|--------|----------------|-----------|----------|--------------|
-| 1 | opencode | 47 | 59.6% | 81.2% | 6,442 | $0.0000 | 143s | 10.7 |
+| 1 | opencode | 249 | 25.7% | 31.3% | 121,167 | $0.0000 | 147s | 13.8 |
 
 ## Cache & Overhead
 
