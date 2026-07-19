@@ -8,20 +8,17 @@ invoke:
   model_flag: --model benchmark/$MODEL_NAME
 
 setup: |
-  mkdir -p "$WORKDIR/.pi"
-  cat > "$WORKDIR/.pi/models.json" <<PIEOF
+  mkdir -p ~/.pi/agent
+  cat > ~/.pi/agent/models.json <<PIEOF
   {
     "providers": {
       "benchmark": {
-        "name": "benchmark",
-        "protocol": "$PROTOCOL",
         "baseUrl": "$MODEL_URL",
+        "api": "openai-completions",
         "apiKey": "$API_KEY",
-        "models": {
-          "$MODEL_NAME": {
-            "name": "$MODEL_NAME"
-          }
-        }
+        "models": [
+          { "id": "$MODEL_NAME" }
+        ]
       }
     }
   }

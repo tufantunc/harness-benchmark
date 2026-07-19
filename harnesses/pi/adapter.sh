@@ -8,10 +8,10 @@ WORKDIR="$2"
 MODEL_FLAG="$3"
 PROMPT=$(cat "$PROMPT_FILE")
 
+cd "$WORKDIR"
 pi -p "$PROMPT" \
     --mode json \
     $MODEL_FLAG \
-    --cwd "$WORKDIR" \
     > /output/events.jsonl 2>/output/agent-stderr.log
 
 echo $? > /output/agent-exit-code
