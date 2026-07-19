@@ -82,10 +82,15 @@ for (const file of files) {
         tools = reqJson.tools;
     }
 
-    systemHashes.add(hash(system));
-    toolsHashes.add(hash(tools));
+    // Only hash requests that have tools (actual coding requests)
+    // Skip warmup/title-generation calls that have different prefixes
+    if (Array.isArray(reqJson.tools) && reqJson.tools.length > 0) {
+        systemHashes.add(hash(system));
+        toolsHashes.add(hash(tools));
+    }
 
-    if (firstSystemTokens === 0) {
+    // Use the first request that HAS tools (actual coding request, not warmup/title-gen)
+    if (firstSystemTokens === 0 && Array.isArray(reqJson.tools) && reqJson.tools.length > 0) {
         firstSystemTokens = estimateTokens(system);
         firstToolsTokens = estimateTokens(tools);
     }
