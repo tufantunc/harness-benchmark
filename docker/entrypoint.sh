@@ -172,7 +172,7 @@ result = {
     'tokens_cached': proxy.get('cache_read_tokens', 0) or parsed.get('tokens_cached', 0),
     'cost_usd': parsed.get('cost_usd', 0.0),
     'tool_calls': parsed.get('tool_calls', 0),
-    'llm_calls': parsed.get('llm_calls', 0),
+    'llm_calls': parsed.get('llm_calls', 0) or proxy.get('request_count', 0),
     'duration_sec': $DURATION,
     'diff_loc': $DIFF_LOC,
     'cache_write_tokens': proxy.get('cache_write_tokens', 0),
