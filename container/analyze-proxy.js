@@ -45,6 +45,7 @@ let totalCacheWrite = 0;
 let totalCacheRead = 0;
 let totalInput = 0;
 let totalOutput = 0;
+let maxToolCount = 0;
 const systemHashes = new Set();
 const toolsHashes = new Set();
 let firstSystemTokens = 0;
@@ -82,17 +83,20 @@ for (const file of files) {
         tools = reqJson.tools;
     }
 
-    // Only hash requests that have tools (actual coding requests)
-    // Skip warmup/title-generation calls that have different prefixes
-    if (Array.isArray(reqJson.tools) && reqJson.tools.length > 0) {
-        systemHashes.add(hash(system));
-        toolsHashes.add(hash(tools));
+    const toolCount = Array.isArray(reqJson.tools) ? reqJson.tools.length : 0;
+    const sysTokens = estimateTokens(system);
+
+    // Track the request with the most tools (actual coding request, not warmup)
+    if (toolCount > maxToolCount) {
+        maxToolCount = toolCount;
+        firstSystemTokens = sysTokens;
+        firstToolsTokens = estimateTokens(tools);
     }
 
-    // Use the first request that HAS tools (actual coding request, not warmup/title-gen)
-    if (firstSystemTokens === 0 && Array.isArray(reqJson.tools) && reqJson.tools.length > 0) {
-        firstSystemTokens = estimateTokens(system);
-        firstToolsTokens = estimateTokens(tools);
+    // Only hash requests with significant tool counts (skip warmup/title-gen)
+    if (toolCount > 3) {
+        systemHashes.add(hash(system));
+        toolsHashes.add(hash(tools));
     }
 
     // Read usage if available

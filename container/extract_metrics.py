@@ -110,21 +110,14 @@ def parse_opencode_events(lines: list[str]) -> Metrics:
 def parse_grok_events(lines: list[str]) -> Metrics:
     """Parse grok --output-format streaming-json output.
 
-    Grok emits newline-delimited JSON events. Token/cost data is captured
-    by the logging proxy at the API boundary (authoritative source).
-    This parser provides best-effort tool_calls/llm_calls counts.
-
-    NOTE: Event type names are best-guess until a real fixture is captured.
-    Replace with observed types once a grok-events.jsonl sample is available.
+    Grok emits token-level streaming deltas (thought/text), not structured
+    message events. Token/cost data is captured by the logging proxy.
+    The 'end' event signals session completion.
     """
     m = Metrics()
     for evt in _iter_events(lines):
-        evt_type = evt.get("type", "")
-        if evt_type in ("message", "assistant_message", "response", "turn_end"):
-            usage = evt.get("usage") or evt.get("message", {}).get("usage", {})
-            _accumulate_usage(m, usage)
-        elif evt_type in ("tool_call", "tool_use", "tool_execution", "action"):
-            m.tool_calls += 1
+        if evt.get("type") == "end":
+            m.llm_calls += 1
     return m
 
 
