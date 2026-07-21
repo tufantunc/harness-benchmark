@@ -5,18 +5,10 @@ install: npm install -g cline
 
 invoke:
   command: cline "$PROMPT" --json --auto-approve true
-  model_flag: --model benchmark/$MODEL_NAME
+  model_flag: -m $MODEL_NAME
 
 setup: |
-  mkdir -p ~/.cline/data/settings
-  cat > ~/.cline/data/settings/providers.json <<CLINEEOF
-  {
-    "openai": {
-      "baseUrl": "$MODEL_URL",
-      "apiKey": "$API_KEY"
-    }
-  }
-  CLINEEOF
+  cline auth openai --apikey "$API_KEY" --baseurl "$MODEL_URL" --modelid "$MODEL_NAME"
 
 metric_source: events.jsonl
 metric_format: cline
