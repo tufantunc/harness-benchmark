@@ -8,6 +8,10 @@ WORKDIR="$2"
 MODEL_FLAG="$3"
 PROMPT=$(cat "$PROMPT_FILE")
 
+# Cline reads OPENAI_API_KEY for the openai provider
+export OPENAI_API_KEY="${LLM_API_KEY:-${API_KEY:-}}"
+
+cd "$WORKDIR"
 cline "$PROMPT" \
     --json \
     --auto-approve true \
