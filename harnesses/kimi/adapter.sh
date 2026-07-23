@@ -8,9 +8,10 @@ WORKDIR="$2"
 MODEL_FLAG="$3"
 PROMPT=$(cat "$PROMPT_FILE")
 
+cd "$WORKDIR"
 kimi -p "$PROMPT" \
+    --output-format stream-json \
     $MODEL_FLAG \
-    --cwd "$WORKDIR" \
     > /output/events.jsonl 2>/output/agent-stderr.log
 
 echo $? > /output/agent-exit-code
