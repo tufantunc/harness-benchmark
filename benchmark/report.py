@@ -224,12 +224,11 @@ function render(model, lang) {
 
   // Cache & Overhead table
   let cacheHtml = '<h2>Cache & Overhead</h2><table><thead><tr>' +
-    '<th>Harness</th><th>Cache Write</th><th>Cache Read</th>' +
+    '<th>Harness</th>' +
     '<th>Sys Prompt</th><th>Tool Schemas</th><th>API Reqs</th>' +
     '<th>Prefix Stable</th></tr></thead><tbody>';
   entries.forEach(r => {
     cacheHtml += '<tr><td>' + r.harness + '</td>' +
-      '<td>' + fmt(r.avgCacheWrite) + '</td><td>' + fmt(r.avgCacheRead) + '</td>' +
       '<td>' + fmt(r.avgSysPrompt) + '</td><td>' + fmt(r.avgToolSchema) + '</td>' +
       '<td>' + r.avgRequests.toFixed(1) + '</td>' +
       '<td><span class="badge ' + (r.stableRate > 0.8 ? 'badge-yes' : 'badge-no') + '">' + pct(r.stableRate) + '</span></td></tr>';
