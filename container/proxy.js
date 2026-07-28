@@ -13,6 +13,7 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 const { URL } = require('url');
 
 const UPSTREAM = process.env.UPSTREAM_URL;
@@ -140,7 +141,18 @@ const server = http.createServer((clientReq, clientRes) => {
 
                 fs.writeFileSync(path.join(CAPTURE_DIR, `${reqId}-response.raw`), respBody);
 
-                const usage = extractUsage(respBody, proxyRes.headers['content-type']);
+                // Decompress gzip/deflate responses before extracting usage
+                let bodyForUsage = respBody;
+                const encoding = proxyRes.headers['content-encoding'] || '';
+                if (encoding.includes('gzip')) {
+                    try { bodyForUsage = zlib.gunzipSync(respBody); } catch {}
+                } else if (encoding.includes('deflate')) {
+                    try { bodyForUsage = zlib.inflateSync(respBody); } catch {}
+                } else if (encoding.includes('br')) {
+                    try { bodyForUsage = zlib.brotliDecompressSync(respBody); } catch {}
+                }
+
+                const usage = extractUsage(bodyForUsage, proxyRes.headers['content-type']);
                 if (usage) {
                     fs.writeFileSync(
                         path.join(CAPTURE_DIR, `${reqId}-usage.json`),
