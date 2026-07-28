@@ -1,6 +1,6 @@
 import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 import type { HarnessSummary } from '../lib/types';
-import { fmt } from '../lib/format';
+import { fmt, pct } from '../lib/format';
 
 interface TradeoffChartProps {
   summaries: HarnessSummary[];
@@ -17,7 +17,7 @@ function CustomTooltip({ active, payload }: TooltipProps) {
   return (
     <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-xs">
       <div className="font-bold mb-1">{d.harness}</div>
-      <div className="text-zinc-400">Success: {(d.success_rate * 100).toFixed(1)}%</div>
+      <div className="text-zinc-400">Success: {pct(d.success_rate)}</div>
       <div className="text-zinc-400">Tokens: {fmt(d.avg_tokens_in)}</div>
       <div className="text-zinc-400">Schema: {fmt(d.avg_tool_schemas)} tok</div>
     </div>

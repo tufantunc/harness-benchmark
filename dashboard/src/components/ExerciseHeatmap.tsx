@@ -38,7 +38,7 @@ export function ExerciseHeatmap({ runs }: ExerciseHeatmapProps) {
     if (!cell) return 'bg-zinc-900';
     const rate = cell.pass / cell.total;
     if (rate === 1) return 'bg-green-600';
-    if (rate >= 0.34) return 'bg-yellow-600';
+    if (rate >= 1/3) return 'bg-yellow-600';
     if (rate > 0) return 'bg-orange-700';
     return 'bg-red-700';
   }

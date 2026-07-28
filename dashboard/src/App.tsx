@@ -18,6 +18,7 @@ export default function App() {
   const [selectedHarness, setSelectedHarness] = useState<string | null>(null);
 
   const models = useMemo(() => [...new Set(data.runs.map(r => r.model))], []);
+  const languages = useMemo(() => [...new Set(data.runs.map(r => r.language))], []);
 
   const filteredRuns = useMemo(() => {
     return data.runs.filter(r =>
@@ -29,12 +30,13 @@ export default function App() {
   const summaries = useMemo(() => aggregate(filteredRuns), [filteredRuns]);
 
   const handleExport = () => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ ...data, runs: filteredRuns }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = 'benchmark-data.json';
     a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -45,6 +47,7 @@ export default function App() {
         onModelChange={setModel}
         onLanguageChange={setLanguage}
         models={models}
+        languages={languages}
         onExport={handleExport}
       />
 
@@ -65,7 +68,7 @@ export default function App() {
       />
 
       <footer className="mt-8 pt-4 border-t border-zinc-800 text-center text-xs text-zinc-600">
-        Generated at {new Date(data.generated_at).toLocaleString()} · {data.runs.length} runs · {summaries.length} harnesses
+        Generated at {new Date(data.generated_at).toLocaleString()} · {filteredRuns.length} runs · {summaries.length} harnesses
       </footer>
     </div>
   );

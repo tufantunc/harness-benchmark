@@ -46,6 +46,5 @@ export interface HarnessSummary {
 
 export interface BenchmarkData {
   runs: TaskRun[];
-  summaries: HarnessSummary[];
   generated_at: string;
 }

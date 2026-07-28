@@ -8,7 +8,22 @@ interface LeaderboardTableProps {
   onSelectHarness: (harness: string) => void;
 }
 
-type SortKey = keyof HarnessSummary;
+type SortKey = 'success_rate' | 'pass_at_k' | 'avg_tokens_in' | 'avg_tokens_out' | 'avg_llm_calls' | 'avg_tool_calls' | 'avg_duration' | 'avg_system_prompt' | 'avg_tool_schemas' | 'prefix_stable_rate';
+
+// Module-scope helpers (avoid re-mounting DOM on every render)
+function renderTh(label: string, sortKey: SortKey | undefined, activeKey: SortKey, toggleSort: (k: SortKey) => void) {
+  return (
+    <th
+      className="px-3 py-2 text-left text-xs font-medium text-zinc-500 uppercase cursor-pointer hover:text-zinc-300"
+      onClick={() => sortKey && toggleSort(sortKey)}
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {sortKey && <ArrowUpDown size={12} className={activeKey === sortKey ? 'text-blue-400' : 'text-zinc-700'} />}
+      </span>
+    </th>
+  );
+}
 
 export function LeaderboardTable({ summaries, onSelectHarness }: LeaderboardTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('success_rate');
@@ -23,6 +38,7 @@ export function LeaderboardTable({ summaries, onSelectHarness }: LeaderboardTabl
     rows.sort((a, b) => {
       const av = a[sortKey];
       const bv = b[sortKey];
+      if (av === null && bv === null) return 0;
       if (av === null) return 1;
       if (bv === null) return -1;
       const cmp = (av as number) - (bv as number);
@@ -40,35 +56,19 @@ export function LeaderboardTable({ summaries, onSelectHarness }: LeaderboardTabl
     }
   };
 
-  const Th = ({ label, sortKey: k, className = '' }: { label: string; sortKey?: SortKey; className?: string }) => (
-    <th
-      className={`px-3 py-2 text-left text-xs font-medium text-zinc-500 uppercase cursor-pointer hover:text-zinc-300 ${className}`}
-      onClick={() => k && toggleSort(k)}
-    >
-      <span className="inline-flex items-center gap-1">
-        {label}
-        {k && <ArrowUpDown size={12} className={sortKey === k ? 'text-blue-400' : 'text-zinc-700'} />}
-      </span>
-    </th>
-  );
-
-  const Td = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-    <td className={`px-3 py-2 text-sm ${className}`}>{children}</td>
-  );
-
-  const columns = [
-    { key: 'success_rate' as SortKey, label: 'Success', fmt: (s: HarnessSummary) => (
+  const columns: { key: SortKey; label: string; render: (s: HarnessSummary) => React.ReactNode }[] = [
+    { key: 'success_rate', label: 'Success', render: s => (
       <span className={`inline-flex px-2 py-0.5 rounded text-xs border ${scoreBadge(s.success_rate)}`}>{pct(s.success_rate)}</span>
     )},
-    { key: 'pass_at_k' as SortKey, label: 'pass@k', fmt: (s: HarnessSummary) => pct(s.pass_at_k) },
-    { key: 'avg_tokens_in' as SortKey, label: 'Tokens In', fmt: (s: HarnessSummary) => fmt(s.avg_tokens_in) },
-    { key: 'avg_tokens_out' as SortKey, label: 'Tokens Out', fmt: (s: HarnessSummary) => fmt(s.avg_tokens_out) },
-    { key: 'avg_llm_calls' as SortKey, label: 'LLM', fmt: (s: HarnessSummary) => s.avg_llm_calls.toFixed(1) },
-    { key: 'avg_tool_calls' as SortKey, label: 'Tools', fmt: (s: HarnessSummary) => s.avg_tool_calls !== null ? s.avg_tool_calls.toFixed(1) : '—' },
-    { key: 'avg_duration' as SortKey, label: 'Time', fmt: (s: HarnessSummary) => secs(s.avg_duration) },
-    { key: 'avg_system_prompt' as SortKey, label: 'Sys Tok', fmt: (s: HarnessSummary) => fmt(s.avg_system_prompt) },
-    { key: 'avg_tool_schemas' as SortKey, label: 'Schema', fmt: (s: HarnessSummary) => fmt(s.avg_tool_schemas) },
-    { key: 'prefix_stable_rate' as SortKey, label: 'Stable', fmt: (s: HarnessSummary) => (
+    { key: 'pass_at_k', label: 'pass@k', render: s => pct(s.pass_at_k) },
+    { key: 'avg_tokens_in', label: 'Tokens In', render: s => fmt(s.avg_tokens_in) },
+    { key: 'avg_tokens_out', label: 'Tokens Out', render: s => fmt(s.avg_tokens_out) },
+    { key: 'avg_llm_calls', label: 'LLM', render: s => s.avg_llm_calls.toFixed(1) },
+    { key: 'avg_tool_calls', label: 'Tools', render: s => s.avg_tool_calls !== null ? s.avg_tool_calls.toFixed(1) : '—' },
+    { key: 'avg_duration', label: 'Time', render: s => secs(s.avg_duration) },
+    { key: 'avg_system_prompt', label: 'Sys Tok', render: s => fmt(s.avg_system_prompt) },
+    { key: 'avg_tool_schemas', label: 'Schema', render: s => fmt(s.avg_tool_schemas) },
+    { key: 'prefix_stable_rate', label: 'Stable', render: s => (
       <span className={s.prefix_stable_rate > 0.8 ? 'text-green-500' : 'text-red-500'}>{pct(s.prefix_stable_rate)}</span>
     )},
   ];
@@ -90,9 +90,14 @@ export function LeaderboardTable({ summaries, onSelectHarness }: LeaderboardTabl
         <table className="w-full">
           <thead className="bg-zinc-900/50">
             <tr>
-              <Th label="#" />
-              <Th label="Harness" />
-              {columns.map(c => <Th key={c.label} label={c.label} sortKey={c.key} />)}
+              {renderTh('#', undefined, sortKey, toggleSort)}
+              {renderTh('Harness', undefined, sortKey, toggleSort)}
+              {columns.map(c => <th key={c.label} className="px-3 py-2 text-left text-xs font-medium text-zinc-500 uppercase cursor-pointer hover:text-zinc-300" onClick={() => toggleSort(c.key)}>
+                <span className="inline-flex items-center gap-1">
+                  {c.label}
+                  <ArrowUpDown size={12} className={sortKey === c.key ? 'text-blue-400' : 'text-zinc-700'} />
+                </span>
+              </th>)}
             </tr>
           </thead>
           <tbody>
@@ -102,9 +107,9 @@ export function LeaderboardTable({ summaries, onSelectHarness }: LeaderboardTabl
                 onClick={() => onSelectHarness(s.harness)}
                 className={`border-t border-zinc-800 hover:bg-zinc-900 cursor-pointer ${i === 0 ? 'font-semibold' : ''}`}
               >
-                <Td className="text-zinc-600">{i + 1}</Td>
-                <Td className="font-medium">{s.harness}</Td>
-                {columns.map(c => <Td key={c.label}>{c.fmt(s)}</Td>)}
+                <td className="px-3 py-2 text-sm text-zinc-600">{i + 1}</td>
+                <td className="px-3 py-2 text-sm font-medium">{s.harness}</td>
+                {columns.map(c => <td key={c.label} className="px-3 py-2 text-sm">{c.render(s)}</td>)}
               </tr>
             ))}
           </tbody>

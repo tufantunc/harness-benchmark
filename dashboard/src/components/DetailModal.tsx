@@ -12,21 +12,32 @@ interface DetailModalProps {
 
 export function DetailModal({ harness, summaries, onClose }: DetailModalProps) {
   const selected = summaries.find(s => s.harness === harness);
-  const maxTokens = Math.max(...summaries.map(s => s.avg_tokens_in));
-  const maxDuration = Math.max(...summaries.map(s => s.avg_duration));
-  const maxSchemas = Math.max(...summaries.map(s => s.avg_tool_schemas));
 
   const radarData = useMemo(() => {
-    if (!selected) return [];
-    return [
-      { metric: 'Success', harness: Math.round(selected.success_rate * 100), avg: 50 },
-      { metric: 'pass@k', harness: Math.round(selected.pass_at_k * 100), avg: 50 },
-      { metric: 'Efficiency', harness: Math.round((1 - Math.min(1, selected.avg_tokens_in / maxTokens)) * 100), avg: 50 },
-      { metric: 'Speed', harness: Math.round((1 - Math.min(1, selected.avg_duration / maxDuration)) * 100), avg: 50 },
-      { metric: 'Stability', harness: Math.round(selected.prefix_stable_rate * 100), avg: 50 },
-      { metric: 'Lean Tools', harness: Math.round((1 - Math.min(1, selected.avg_tool_schemas / maxSchemas)) * 100), avg: 50 },
+    if (!selected || summaries.length === 0) return [];
+    const maxTokens = Math.max(...summaries.map(s => s.avg_tokens_in)) || 1;
+    const maxDuration = Math.max(...summaries.map(s => s.avg_duration)) || 1;
+    const maxSchemas = Math.max(...summaries.map(s => s.avg_tool_schemas)) || 1;
+
+    // Compute real peer averages
+    const n = summaries.length;
+    const peerAvg = (sel: (s: HarnessSummary) => number) => summaries.reduce((a, s) => a + sel(s), 0) / n;
+
+    const metrics = [
+      { metric: 'Success', val: selected.success_rate, peer: peerAvg(s => s.success_rate), max: 1 },
+      { metric: 'pass@k', val: selected.pass_at_k, peer: peerAvg(s => s.pass_at_k), max: 1 },
+      { metric: 'Efficiency', val: 1 - Math.min(1, selected.avg_tokens_in / maxTokens), peer: 1 - peerAvg(s => Math.min(1, s.avg_tokens_in / maxTokens)), max: 1 },
+      { metric: 'Speed', val: 1 - Math.min(1, selected.avg_duration / maxDuration), peer: 1 - peerAvg(s => Math.min(1, s.avg_duration / maxDuration)), max: 1 },
+      { metric: 'Stability', val: selected.prefix_stable_rate, peer: peerAvg(s => s.prefix_stable_rate), max: 1 },
+      { metric: 'Lean Tools', val: 1 - Math.min(1, selected.avg_tool_schemas / maxSchemas), peer: 1 - peerAvg(s => Math.min(1, s.avg_tool_schemas / maxSchemas)), max: 1 },
     ];
-  }, [selected, maxTokens, maxDuration, maxSchemas]);
+
+    return metrics.map(m => ({
+      metric: m.metric,
+      harness: Math.round(m.val * 100),
+      'peer avg': Math.round(m.peer * 100),
+    }));
+  }, [selected, summaries]);
 
   if (!harness || !selected) return null;
 
@@ -67,6 +78,7 @@ export function DetailModal({ harness, summaries, onClose }: DetailModalProps) {
                 <PolarAngleAxis dataKey="metric" tick={{ fill: '#71717a', fontSize: 11 }} />
                 <PolarRadiusAxis domain={[0, 100]} tick={{ fill: '#52525b', fontSize: 9 }} stroke="#27272a" />
                 <Radar name="Harness" dataKey="harness" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
+                <Radar name="Peer Avg" dataKey="peer avg" stroke="#71717a" fill="#71717a" fillOpacity={0.1} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
               </RadarChart>
             </ResponsiveContainer>

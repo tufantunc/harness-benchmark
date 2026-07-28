@@ -10,7 +10,8 @@ interface HeroCardsProps {
 export function HeroCards({ summaries, totalRuns }: HeroCardsProps) {
   if (!summaries.length) return null;
 
-  const topPerformer = [...summaries].sort((a, b) => b.success_rate - a.success_rate)[0];
+  // summaries arrives sorted by success_rate desc from aggregate()
+  const topPerformer = summaries[0];
   const mostEfficient = [...summaries]
     .filter(s => s.success_count > 0)
     .sort((a, b) => a.avg_tokens_in - b.avg_tokens_in)[0];

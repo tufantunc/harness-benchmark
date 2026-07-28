@@ -6,10 +6,11 @@ interface HeaderProps {
   onModelChange: (v: string) => void;
   onLanguageChange: (v: string) => void;
   models: string[];
+  languages: string[];
   onExport: () => void;
 }
 
-export function Header({ model, language, onModelChange, onLanguageChange, models, onExport }: HeaderProps) {
+export function Header({ model, language, onModelChange, onLanguageChange, models, languages, onExport }: HeaderProps) {
   return (
     <header className="border-b border-zinc-800 pb-6 mb-8">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -40,6 +41,7 @@ export function Header({ model, language, onModelChange, onLanguageChange, model
           onChange={(e) => onModelChange(e.target.value)}
           className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-300"
         >
+          <option value="">All Models</option>
           {models.map((m) => (
             <option key={m} value={m}>{m}</option>
           ))}
@@ -50,8 +52,9 @@ export function Header({ model, language, onModelChange, onLanguageChange, model
           className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-300"
         >
           <option value="">All Languages</option>
-          <option value="python">Python</option>
-          <option value="javascript">JavaScript</option>
+          {languages.map((l) => (
+            <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>
+          ))}
         </select>
       </div>
     </header>
