@@ -107,7 +107,7 @@ function render(model, lang) {
       '<td>' + (i+1) + '</td><td>' + r.harness + '</td><td>' + r.total + '</td>' +
       '<td>' + pct(r.successRate) + '</td><td>' + pct(r.passK) + '</td>' +
       '<td>' + fmt(r.avgIn) + '</td><td>' + fmt(r.avgOut) + '</td>' +
-      '<td>' + r.avgLLM.toFixed(1) + '</td><td>' + r.avgTools.toFixed(1) + '</td>' +
+      '<td>' + r.avgLLM.toFixed(1) + '</td><td>' + (r.avgTools > 0 ? r.avgTools.toFixed(1) : '-') + '</td>' +
       '<td>' + money(r.avgCost) + '</td><td>' + Math.round(r.avgDur) + 's</td></tr>';
   });
   html += '</tbody></table>';
