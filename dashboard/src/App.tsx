@@ -52,9 +52,9 @@ export default function App() {
 
       <TradeoffChart summaries={summaries} />
 
-      <ExerciseHeatmap runs={filteredRuns} />
-
       <LeaderboardTable summaries={summaries} onSelectHarness={setSelectedHarness} />
+
+      <ExerciseHeatmap runs={filteredRuns} />
 
       <Methodology />
 
