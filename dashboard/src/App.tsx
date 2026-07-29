@@ -57,7 +57,9 @@ export default function App() {
 
       <LeaderboardTable summaries={summaries} onSelectHarness={setSelectedHarness} />
 
-      <ExerciseHeatmap runs={filteredRuns} />
+      <div className="mt-8">
+        <ExerciseHeatmap runs={filteredRuns} />
+      </div>
 
       <Methodology />
 
