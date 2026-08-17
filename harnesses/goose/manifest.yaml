@@ -4,7 +4,7 @@ version: "latest"
 install: curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | bash
 
 invoke:
-  command: goose run -t "$PROMPT" --provider benchmark --model $MODEL_NAME
+  command: goose run -t "$PROMPT" --provider benchmark --output-format stream-json
   model_flag: --model $MODEL_NAME
 
 setup: |

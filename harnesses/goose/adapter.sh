@@ -11,6 +11,7 @@ PROMPT=$(cat "$PROMPT_FILE")
 cd "$WORKDIR"
 goose run -t "$PROMPT" \
     --provider benchmark \
+    --output-format stream-json \
     $MODEL_FLAG \
     > /output/events.jsonl 2>/output/agent-stderr.log
 

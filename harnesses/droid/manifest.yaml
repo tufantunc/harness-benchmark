@@ -4,7 +4,7 @@ version: "latest"
 install: curl -fsSL https://app.factory.ai/cli | sh
 
 invoke:
-  command: droid -p "$PROMPT"
+  command: droid exec "$PROMPT" --output-format text --skip-permissions-unsafe
   model_flag: ""
 
 setup: |

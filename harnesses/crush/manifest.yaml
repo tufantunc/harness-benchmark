@@ -4,8 +4,8 @@ version: "latest"
 install: npm install -g @charmland/crush
 
 invoke:
-  command: crush
-  model_flag: ""
+  command: crush run "$PROMPT"
+  model_flag: -m benchmark/$MODEL_NAME
 
 setup: |
   mkdir -p ~/.config/crush
@@ -13,10 +13,16 @@ setup: |
   {
     "providers": {
       "benchmark": {
-        "id": "benchmark",
         "name": "Benchmark",
+        "type": "openai",
         "base_url": "$MODEL_URL",
-        "api_key": "$API_KEY"
+        "api_key": "$API_KEY",
+        "models": [
+          {
+            "id": "$MODEL_NAME",
+            "name": "$MODEL_NAME"
+          }
+        ]
       }
     }
   }

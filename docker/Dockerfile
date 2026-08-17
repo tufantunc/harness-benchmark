@@ -29,7 +29,7 @@ RUN npm install -g opencode-ai && \
 
 # Install Kimi Code CLI (curl installer — SHA256 pinned)
 RUN curl -fsSL -o /tmp/kimi-install.sh https://code.kimi.com/kimi-code/install.sh && \
-    echo "624e4857a73f587961b51ef91c9bf28229f886a0817e96935e88dfd09445faab  /tmp/kimi-install.sh" | sha256sum -c - && \
+    echo "638927825e96825edbb563de5e0cb06f8a0551c53e026ade8b717b0f25cb83d2  /tmp/kimi-install.sh" | sha256sum -c - && \
     bash /tmp/kimi-install.sh && \
     rm /tmp/kimi-install.sh
 
@@ -43,11 +43,8 @@ RUN curl -fsSL -o /tmp/bun-install.sh https://bun.sh/install && \
     echo "dd30c1a575e78bf1b8d0932beb9133fbc60f8644db5903ca74e4f210b680f6cb  /tmp/autohand-install.sh" | sha256sum -c - && \
     bash /tmp/autohand-install.sh && \
     rm /tmp/autohand-install.sh
-# Install Factory Droid (SHA256 pinned)
-RUN curl -fsSL -o /tmp/droid-cli.sh https://app.factory.ai/cli && \
-    echo "78d54387be076e8eb2aade5fe97c9220f161a1dcf91f0d209b81ff807d91f9b0  /tmp/droid-cli.sh" | sha256sum -c - && \
-    sh /tmp/droid-cli.sh && \
-    rm /tmp/droid-cli.sh
+
+# droid: removed — requires Factory auth even for BYOK (spec 2026-07-29, decision 3)
 
 # Install Goose CLI (SHA256 pinned, non-interactive)
 RUN curl -fsSL -o /tmp/goose-cli.sh \

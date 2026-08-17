@@ -168,100 +168,53 @@ def parse_cline_events(lines: list[str]) -> Metrics:
     return m
 
 
-def parse_autohand_events(lines: list[str]) -> Metrics:
-    """Parse autohand -p output.
+def _best_effort_parser(llm_types: tuple[str, ...], tool_types: tuple[str, ...]):
+    """Factory for simple JSONL event parsers.
 
-    Autohand outputs JSON events. Token/cost data is captured by the logging
-    proxy at the API boundary (authoritative source).
-    This parser provides best-effort tool_calls/llm_calls counts.
-
-    NOTE: Event type names are best-guess until a real fixture is captured.
+    Token/cost data is captured by the logging proxy at the API boundary
+    (authoritative source); these parsers provide best-effort
+    tool_calls/llm_calls counts from guessed event type names.
     """
-    m = Metrics()
-    for evt in _iter_events(lines):
-        evt_type = evt.get("type", "")
-        if evt_type in ("message", "assistant", "response", "llm_response"):
-            usage = evt.get("usage") or evt.get("message", {}).get("usage", {})
-            _accumulate_usage(m, usage)
-        elif evt_type in ("tool_call", "tool_use", "tool_execution", "action", "command"):
-            m.tool_calls += 1
-    return m
+    def parse(lines: list[str]) -> Metrics:
+        m = Metrics()
+        for evt in _iter_events(lines):
+            evt_type = evt.get("type", "")
+            if evt_type in llm_types:
+                usage = evt.get("usage") or evt.get("message", {}).get("usage", {})
+                _accumulate_usage(m, usage)
+            elif evt_type in tool_types:
+                m.tool_calls += 1
+        return m
+    return parse
 
 
-def parse_kimi_events(lines: list[str]) -> Metrics:
-    """Parse kimi -p output.
-
-    Kimi CLI outputs JSON events. Token/cost data is captured by the logging
-    proxy at the API boundary (authoritative source).
-    This parser provides best-effort tool_calls/llm_calls counts.
-
-    NOTE: Event type names are best-guess until a real fixture is captured.
-    """
-    m = Metrics()
-    for evt in _iter_events(lines):
-        evt_type = evt.get("type", "")
-        if evt_type in ("message", "assistant", "response", "chat_completion"):
-            usage = evt.get("usage") or evt.get("message", {}).get("usage", {})
-            _accumulate_usage(m, usage)
-        elif evt_type in ("tool_call", "tool_use", "function_call", "action"):
-            m.tool_calls += 1
-    return m
-
-
-def parse_droid_events(lines: list[str]) -> Metrics:
-    """Parse droid -p output. Best-effort; proxy is authoritative."""
-    m = Metrics()
-    for evt in _iter_events(lines):
-        evt_type = evt.get("type", "")
-        if evt_type in ("message", "assistant", "response", "final_answer"):
-            usage = evt.get("usage") or evt.get("message", {}).get("usage", {})
-            _accumulate_usage(m, usage)
-        elif evt_type in ("tool_call", "tool_use", "tool_execution", "action"):
-            m.tool_calls += 1
-    return m
-
-
-def parse_crush_events(lines: list[str]) -> Metrics:
-    """Parse crush -p output. Best-effort; proxy is authoritative."""
-    m = Metrics()
-    for evt in _iter_events(lines):
-        evt_type = evt.get("type", "")
-        if evt_type in ("message", "assistant", "response", "chunk"):
-            usage = evt.get("usage") or evt.get("message", {}).get("usage", {})
-            _accumulate_usage(m, usage)
-        elif evt_type in ("tool_call", "tool_use", "tool_execution", "action"):
-            m.tool_calls += 1
-    return m
-
-
-def parse_goose_events(lines: list[str]) -> Metrics:
-    """Parse goose run output. Best-effort; proxy is authoritative."""
-    m = Metrics()
-    for evt in _iter_events(lines):
-        evt_type = evt.get("type", "")
-        # goose may output plain text or JSON lines
-        if evt_type in ("message", "assistant", "response"):
-            usage = evt.get("usage") or evt.get("message", {}).get("usage", {})
-            _accumulate_usage(m, usage)
-        elif evt_type in ("tool_call", "tool_use", "tool_execution", "action"):
-            m.tool_calls += 1
-    return m
-
-
-def parse_dsh_events(lines: list[str]) -> Metrics:
-    """Parse dsh headless output. Best-effort; proxy is authoritative.
-
-    dsh headless prints the final answer — may be plain text or JSON.
-    """
-    m = Metrics()
-    for evt in _iter_events(lines):
-        evt_type = evt.get("type", "")
-        if evt_type in ("message", "assistant", "response", "answer"):
-            usage = evt.get("usage") or evt.get("message", {}).get("usage", {})
-            _accumulate_usage(m, usage)
-        elif evt_type in ("tool_call", "tool_use", "tool_execution", "action"):
-            m.tool_calls += 1
-    return m
+# format -> (llm event types, tool event types)
+_BEST_EFFORT_FORMATS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
+    "autohand": (
+        ("message", "assistant", "response", "llm_response"),
+        ("tool_call", "tool_use", "tool_execution", "action", "command"),
+    ),
+    "kimi": (
+        ("message", "assistant", "response", "chat_completion"),
+        ("tool_call", "tool_use", "function_call", "action"),
+    ),
+    "droid": (
+        ("message", "assistant", "response", "final_answer"),
+        ("tool_call", "tool_use", "tool_execution", "action"),
+    ),
+    "crush": (
+        ("message", "assistant", "response", "chunk"),
+        ("tool_call", "tool_use", "tool_execution", "action"),
+    ),
+    "goose": (
+        ("message", "assistant", "response"),
+        ("tool_call", "tool_use", "tool_execution", "action"),
+    ),
+    "dsh": (
+        ("message", "assistant", "response", "answer"),
+        ("tool_call", "tool_use", "tool_execution", "action"),
+    ),
+}
 
 
 PARSERS = {
@@ -270,12 +223,7 @@ PARSERS = {
     "grok": parse_grok_events,
     "junie": parse_junie_events,
     "cline": parse_cline_events,
-    "autohand": parse_autohand_events,
-    "kimi": parse_kimi_events,
-    "droid": parse_droid_events,
-    "crush": parse_crush_events,
-    "goose": parse_goose_events,
-    "dsh": parse_dsh_events,
+    **{fmt: _best_effort_parser(llm, tool) for fmt, (llm, tool) in _BEST_EFFORT_FORMATS.items()},
 }
 
 
