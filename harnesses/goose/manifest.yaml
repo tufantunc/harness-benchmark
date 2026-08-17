@@ -1,0 +1,31 @@
+# harnesses/goose/manifest.yaml
+name: goose
+version: "latest"
+install: curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | bash
+
+invoke:
+  command: goose run -t "$PROMPT" --provider benchmark --model $MODEL_NAME
+  model_flag: --model $MODEL_NAME
+
+setup: |
+  mkdir -p ~/.config/goose/custom_providers
+  cat > ~/.config/goose/custom_providers/benchmark.json <<GOOSEEOF
+  {
+    "name": "benchmark",
+    "engine": "openai",
+    "display_name": "Benchmark",
+    "api_key_env": "LLM_API_KEY",
+    "base_url": "$MODEL_URL",
+    "models": [
+      {
+        "name": "$MODEL_NAME",
+        "context_limit": 128000
+      }
+    ],
+    "supports_streaming": true,
+    "requires_auth": true
+  }
+  GOOSEEOF
+
+metric_source: events.jsonl
+metric_format: goose

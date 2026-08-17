@@ -1,0 +1,26 @@
+# harnesses/crush/manifest.yaml
+name: crush
+version: "latest"
+install: npm install -g @charmland/crush
+
+invoke:
+  command: crush
+  model_flag: ""
+
+setup: |
+  mkdir -p ~/.config/crush
+  cat > ~/.config/crush/crush.json <<CRUSHEOF
+  {
+    "providers": {
+      "benchmark": {
+        "id": "benchmark",
+        "name": "Benchmark",
+        "base_url": "$MODEL_URL",
+        "api_key": "$API_KEY"
+      }
+    }
+  }
+  CRUSHEOF
+
+metric_source: events.jsonl
+metric_format: crush

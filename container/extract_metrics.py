@@ -208,6 +208,62 @@ def parse_kimi_events(lines: list[str]) -> Metrics:
     return m
 
 
+def parse_droid_events(lines: list[str]) -> Metrics:
+    """Parse droid -p output. Best-effort; proxy is authoritative."""
+    m = Metrics()
+    for evt in _iter_events(lines):
+        evt_type = evt.get("type", "")
+        if evt_type in ("message", "assistant", "response", "final_answer"):
+            usage = evt.get("usage") or evt.get("message", {}).get("usage", {})
+            _accumulate_usage(m, usage)
+        elif evt_type in ("tool_call", "tool_use", "tool_execution", "action"):
+            m.tool_calls += 1
+    return m
+
+
+def parse_crush_events(lines: list[str]) -> Metrics:
+    """Parse crush -p output. Best-effort; proxy is authoritative."""
+    m = Metrics()
+    for evt in _iter_events(lines):
+        evt_type = evt.get("type", "")
+        if evt_type in ("message", "assistant", "response", "chunk"):
+            usage = evt.get("usage") or evt.get("message", {}).get("usage", {})
+            _accumulate_usage(m, usage)
+        elif evt_type in ("tool_call", "tool_use", "tool_execution", "action"):
+            m.tool_calls += 1
+    return m
+
+
+def parse_goose_events(lines: list[str]) -> Metrics:
+    """Parse goose run output. Best-effort; proxy is authoritative."""
+    m = Metrics()
+    for evt in _iter_events(lines):
+        evt_type = evt.get("type", "")
+        # goose may output plain text or JSON lines
+        if evt_type in ("message", "assistant", "response"):
+            usage = evt.get("usage") or evt.get("message", {}).get("usage", {})
+            _accumulate_usage(m, usage)
+        elif evt_type in ("tool_call", "tool_use", "tool_execution", "action"):
+            m.tool_calls += 1
+    return m
+
+
+def parse_dsh_events(lines: list[str]) -> Metrics:
+    """Parse dsh headless output. Best-effort; proxy is authoritative.
+
+    dsh headless prints the final answer — may be plain text or JSON.
+    """
+    m = Metrics()
+    for evt in _iter_events(lines):
+        evt_type = evt.get("type", "")
+        if evt_type in ("message", "assistant", "response", "answer"):
+            usage = evt.get("usage") or evt.get("message", {}).get("usage", {})
+            _accumulate_usage(m, usage)
+        elif evt_type in ("tool_call", "tool_use", "tool_execution", "action"):
+            m.tool_calls += 1
+    return m
+
+
 PARSERS = {
     "pi": parse_pi_events,
     "opencode": parse_opencode_events,
@@ -216,6 +272,10 @@ PARSERS = {
     "cline": parse_cline_events,
     "autohand": parse_autohand_events,
     "kimi": parse_kimi_events,
+    "droid": parse_droid_events,
+    "crush": parse_crush_events,
+    "goose": parse_goose_events,
+    "dsh": parse_dsh_events,
 }
 
 

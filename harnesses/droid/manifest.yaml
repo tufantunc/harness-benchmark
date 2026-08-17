@@ -1,0 +1,28 @@
+# harnesses/droid/manifest.yaml
+name: droid
+version: "latest"
+install: curl -fsSL https://app.factory.ai/cli | sh
+
+invoke:
+  command: droid -p "$PROMPT"
+  model_flag: ""
+
+setup: |
+  mkdir -p ~/.factory
+  cat > ~/.factory/settings.json <<DROIDEF
+  {
+    "customModels": [
+      {
+        "displayName": "benchmark",
+        "model": "$MODEL_NAME",
+        "baseUrl": "$MODEL_URL",
+        "apiKey": "$API_KEY",
+        "provider": "generic-chat-completion-api",
+        "maxOutputTokens": 131072
+      }
+    ]
+  }
+  DROIDEF
+
+metric_source: events.jsonl
+metric_format: droid
