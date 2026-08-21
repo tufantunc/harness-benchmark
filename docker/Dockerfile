@@ -28,10 +28,12 @@ RUN npm install -g opencode-ai && \
     npm install -g @deepseek-ai/dsh && \
     npm install -g @openai/codex
 
-# Install Kimi Code CLI (curl installer — SHA256 pinned)
+# Install Kimi Code CLI (curl installer — SHA256 pins the installer script for
+# reproducibility; update the pin (after verifying the newly served script) when
+# upstream changes it. KIMI_VERSION pins the binary version — update on upgrade.)
 RUN curl -fsSL -o /tmp/kimi-install.sh https://code.kimi.com/kimi-code/install.sh && \
     echo "7212eb6da4e7d53bb4925cfb84e4a87dbdb123843b2e4afd2c2400b3d0649da3  /tmp/kimi-install.sh" | sha256sum -c - && \
-    bash /tmp/kimi-install.sh && \
+    KIMI_VERSION=0.38.0 bash /tmp/kimi-install.sh && \
     rm /tmp/kimi-install.sh
 
 # Install Bun (SHA256 pinned) then AutoHand Code CLI (SHA256 pinned)

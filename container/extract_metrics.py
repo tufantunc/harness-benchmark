@@ -176,8 +176,9 @@ def parse_codex_events(lines: list[str]) -> Metrics:
     command_execution/file_change/mcp_tool_call/web_search/todo_list = tool
     call; turn.completed = one LLM turn (+ usage). Builds that wrap events in
     a {"msg": …} envelope are tolerated. error/turn.failed events count as
-    nothing — retried requests surface as proxy request_count instead.
-    Token/cost data is captured by the logging proxy (authoritative source).
+    nothing; retried requests remain visible in the proxy's request_count
+    metric. Token/cost data is captured by the logging proxy (authoritative
+    source).
     """
     m = Metrics()
     tool_item_types = (
@@ -185,7 +186,7 @@ def parse_codex_events(lines: list[str]) -> Metrics:
         "web_search", "todo_list",
     )
     for evt in _iter_events(lines):
-        msg = evt.get("msg", evt)  # unwrap envelope when present
+        msg = evt["msg"] if isinstance(evt.get("msg"), dict) else evt
         msg_type = msg.get("type", "")
         if msg_type == "item.completed":
             item = msg.get("item", {})
@@ -193,12 +194,11 @@ def parse_codex_events(lines: list[str]) -> Metrics:
                 m.tool_calls += 1
         elif msg_type == "turn.completed":
             usage = msg.get("usage") or {}
-            if not _accumulate_usage(m, {
+            _accumulate_usage(m, {
                 "input_tokens": usage.get("input_tokens", 0),
                 "output_tokens": usage.get("output_tokens", 0),
                 "cache_read_tokens": usage.get("cached_input_tokens", 0),
-            }):
-                m.llm_calls += 1
+            })
         elif msg_type in ("agent_message", "response"):
             m.llm_calls += 1
         elif msg_type in ("exec_command", "patch_apply", "mcp_tool_call"):

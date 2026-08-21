@@ -1,6 +1,12 @@
 {"type":"thread.started","thread_id":"t1"}
 {"type":"turn.started"}
 {"type":"item.completed","item":{"id":"i1","type":"command_execution","command":"ls","exit_code":0,"aggregated_output":"..."}}
+{"type":"item.completed","item":{"id":"i0","type":"error","message":"Model metadata not found, using fallback"}}
 {"type":"item.completed","item":{"id":"i2","type":"file_change","changes":[{"path":"bob.py","kind":"add"}]}}
 {"type":"item.completed","item":{"id":"i3","type":"agent_message","content":"done"}}
 {"type":"turn.completed","usage":{"input_tokens":1200,"output_tokens":300,"cached_input_tokens":450}}
+{"type":"error","message":"Reconnecting... 1/5 (unexpected status 401 Unauthorized)"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"i4","type":"command_execution","command":"pytest","exit_code":0,"aggregated_output":"..."}}
+{"type":"turn.completed","usage":{"input_tokens":800,"output_tokens":150}}
+{"type":"turn.failed","error":{"message":"unexpected status 401 Unauthorized"}}

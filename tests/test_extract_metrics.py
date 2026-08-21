@@ -95,11 +95,52 @@ def test_extract_codex_events(fixtures_dir):
     events_file = fixtures_dir / "codex-events.jsonl"
     metrics = extract_metrics(events_file, format="codex")
 
-    assert metrics.llm_calls == 1  # one turn.completed
-    assert metrics.tool_calls == 2  # command_execution + file_change
-    assert metrics.tokens_input == 1200
-    assert metrics.tokens_output == 300
+    # two completed turns (the failed turn and error events count as nothing)
+    assert metrics.llm_calls == 2
+    # command_execution x2 + file_change; error items don't count
+    assert metrics.tool_calls == 3
+    # usage summed across turns: 1200+800, 300+150, 450+0
+    assert metrics.tokens_input == 2000
+    assert metrics.tokens_output == 450
     assert metrics.tokens_cached == 450
+    # cost is proxy-authoritative; the parser never surfaces it
+    assert metrics.cost_usd == 0.0
+
+
+def test_codex_turn_completed_without_usage_counts_llm_call(tmp_path):
+    events_file = tmp_path / "no-usage.jsonl"
+    events_file.write_text('{"type":"turn.completed"}\n')
+    metrics = extract_metrics(events_file, format="codex")
+
+    assert metrics.llm_calls == 1
+    assert metrics.tokens_input == 0
+    assert metrics.tokens_output == 0
+
+
+def test_codex_flat_legacy_types(tmp_path):
+    """Legacy flat tool/message types are matched best-effort."""
+    events_file = tmp_path / "legacy.jsonl"
+    events_file.write_text(
+        '{"type":"agent_message","message":"hi"}\n'
+        '{"type":"response","message":"there"}\n'
+        '{"type":"exec_command","command":"ls"}\n'
+        '{"type":"patch_apply","changes":[]}\n'
+        '{"type":"mcp_tool_call","tool":"x"}\n'
+    )
+    metrics = extract_metrics(events_file, format="codex")
+
+    assert metrics.llm_calls == 2
+    assert metrics.tool_calls == 3
+
+
+def test_codex_string_msg_field_ignored(tmp_path):
+    """A flat event carrying a string msg field must not crash the unwrap."""
+    events_file = tmp_path / "str-msg.jsonl"
+    events_file.write_text('{"type":"error","msg":"boom"}\n')
+    metrics = extract_metrics(events_file, format="codex")
+
+    assert metrics.llm_calls == 0
+    assert metrics.tool_calls == 0
 
 
 def test_codex_nested_envelope_shape(tmp_path):
