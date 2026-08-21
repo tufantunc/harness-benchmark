@@ -25,7 +25,8 @@ RUN npm install -g opencode-ai && \
     npm install -g cline && \
     npm install -g @kilocode/cli && \
     npm install -g @charmland/crush && \
-    npm install -g @deepseek-ai/dsh
+    npm install -g @deepseek-ai/dsh && \
+    npm install -g @openai/codex
 
 # Install Kimi Code CLI (curl installer — SHA256 pinned)
 RUN curl -fsSL -o /tmp/kimi-install.sh https://code.kimi.com/kimi-code/install.sh && \
