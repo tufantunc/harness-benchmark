@@ -1,0 +1,24 @@
+# harnesses/codex/manifest.yaml
+name: codex
+version: "latest"
+install: npm install -g @openai/codex
+
+invoke:
+  command: codex exec --json --skip-git-repo-check --sandbox danger-full-access - < "$PROMPT_FILE"
+  model_flag: -m $MODEL_NAME
+
+setup: |
+  mkdir -p ~/.codex
+  cat > ~/.codex/config.toml <<CODEXEOF
+  model = "$MODEL_NAME"
+  model_provider = "benchmark"
+
+  [model_providers.benchmark]
+  name = "Benchmark Proxy"
+  base_url = "$MODEL_URL"
+  env_key = "API_KEY"
+  wire_api = "chat"
+  CODEXEOF
+
+metric_source: events.jsonl
+metric_format: codex
