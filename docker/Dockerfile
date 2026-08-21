@@ -30,7 +30,7 @@ RUN npm install -g opencode-ai && \
 
 # Install Kimi Code CLI (curl installer — SHA256 pinned)
 RUN curl -fsSL -o /tmp/kimi-install.sh https://code.kimi.com/kimi-code/install.sh && \
-    echo "638927825e96825edbb563de5e0cb06f8a0551c53e026ade8b717b0f25cb83d2  /tmp/kimi-install.sh" | sha256sum -c - && \
+    echo "7212eb6da4e7d53bb4925cfb84e4a87dbdb123843b2e4afd2c2400b3d0649da3  /tmp/kimi-install.sh" | sha256sum -c - && \
     bash /tmp/kimi-install.sh && \
     rm /tmp/kimi-install.sh
 
