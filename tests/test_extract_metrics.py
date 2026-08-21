@@ -102,12 +102,12 @@ def test_extract_codex_events(fixtures_dir):
     assert metrics.tokens_cached == 450
 
 
-def test_codex_flat_legacy_shape(tmp_path):
-    """Older codex builds emit flat {"type": ...} events — tolerate both."""
-    events_file = tmp_path / "flat.jsonl"
+def test_codex_nested_envelope_shape(tmp_path):
+    """Some codex builds wrap events in a msg envelope — tolerate both."""
+    events_file = tmp_path / "nested.jsonl"
     events_file.write_text(
-        '{"type":"agent_message","message":"hi"}\n'
-        '{"type":"exec_command","command":"ls"}\n'
+        '{"id":"1","msg":{"type":"agent_message","content":"hi"}}\n'
+        '{"id":"2","msg":{"type":"item.completed","item":{"type":"command_execution","command":"ls"}}}\n'
     )
     metrics = extract_metrics(events_file, format="codex")
 

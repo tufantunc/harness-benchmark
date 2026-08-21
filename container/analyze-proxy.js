@@ -62,7 +62,8 @@ for (const file of files) {
     } catch { continue; }
 
     // Extract system prompt and tools from request
-    // Handles both OpenAI (messages[0].role=system) and Anthropic (system field) formats
+    // Handles OpenAI chat (messages[0].role=system), OpenAI Responses
+    // (instructions field), and Anthropic (system field) formats
     let system = '';
     let tools = [];
 
@@ -70,6 +71,8 @@ for (const file of files) {
         system = reqJson.system;
     } else if (Array.isArray(reqJson.system)) {
         system = reqJson.system.map(b => b.text || '').join('');
+    } else if (typeof reqJson.instructions === 'string') {
+        system = reqJson.instructions;
     } else if (reqJson.messages) {
         const sysMsg = reqJson.messages.find(m => m.role === 'system');
         if (sysMsg) {

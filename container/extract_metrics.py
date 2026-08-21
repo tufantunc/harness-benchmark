@@ -171,10 +171,12 @@ def parse_cline_events(lines: list[str]) -> Metrics:
 def parse_codex_events(lines: list[str]) -> Metrics:
     """Parse codex exec --json output.
 
-    Events are wrapped in a msg envelope: {"id":…,"msg":{"type":…}}.
-    item.completed with item.type command_execution/file_change/mcp_tool_call/
-    web_search/todo_list = tool call; turn.completed = one LLM turn (+ usage).
-    Older builds emit flat {"type": …} events — both shapes are handled.
+    Events are flat: {"type":"item.completed","item":{"type":…}} (verified
+    against a live container run). item.completed with item.type
+    command_execution/file_change/mcp_tool_call/web_search/todo_list = tool
+    call; turn.completed = one LLM turn (+ usage). Builds that wrap events in
+    a {"msg": …} envelope are tolerated. error/turn.failed events count as
+    nothing — retried requests surface as proxy request_count instead.
     Token/cost data is captured by the logging proxy (authoritative source).
     """
     m = Metrics()
@@ -183,7 +185,7 @@ def parse_codex_events(lines: list[str]) -> Metrics:
         "web_search", "todo_list",
     )
     for evt in _iter_events(lines):
-        msg = evt.get("msg", evt)  # unwrap envelope; flat events pass through
+        msg = evt.get("msg", evt)  # unwrap envelope when present
         msg_type = msg.get("type", "")
         if msg_type == "item.completed":
             item = msg.get("item", {})

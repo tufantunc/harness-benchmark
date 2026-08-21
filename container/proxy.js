@@ -89,6 +89,17 @@ function extractUsageFromSse(body) {
                     cache_write_tokens: u.cache_creation_input_tokens || u.cache_write || 0,
                 };
             }
+
+            // OpenAI Responses API: usage in response.completed event
+            if (json.type === 'response.completed' && json.response && json.response.usage) {
+                const u = json.response.usage;
+                usage = {
+                    input_tokens: u.prompt_tokens || u.input_tokens || 0,
+                    output_tokens: u.completion_tokens || u.output_tokens || 0,
+                    cache_read_tokens: (u.input_tokens_details && u.input_tokens_details.cached_tokens) || 0,
+                    cache_write_tokens: 0,
+                };
+            }
         } catch {}
     }
 

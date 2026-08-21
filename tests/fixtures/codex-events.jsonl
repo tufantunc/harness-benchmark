@@ -1,6 +1,6 @@
-{"id":"1","msg":{"type":"thread.started","thread_id":"t1"}}
-{"id":"2","msg":{"type":"turn.started"}}
-{"id":"3","msg":{"type":"item.completed","item":{"id":"i1","type":"command_execution","command":"ls","exit_code":0,"aggregated_output":"..."}}}
-{"id":"4","msg":{"type":"item.completed","item":{"id":"i2","type":"file_change","changes":[{"path":"bob.py","kind":"add"}]}}}
-{"id":"5","msg":{"type":"item.completed","item":{"id":"i3","type":"agent_message","content":"done"}}}
-{"id":"6","msg":{"type":"turn.completed","usage":{"input_tokens":1200,"output_tokens":300,"cached_input_tokens":450}}}
+{"type":"thread.started","thread_id":"t1"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"i1","type":"command_execution","command":"ls","exit_code":0,"aggregated_output":"..."}}
+{"type":"item.completed","item":{"id":"i2","type":"file_change","changes":[{"path":"bob.py","kind":"add"}]}}
+{"type":"item.completed","item":{"id":"i3","type":"agent_message","content":"done"}}
+{"type":"turn.completed","usage":{"input_tokens":1200,"output_tokens":300,"cached_input_tokens":450}}

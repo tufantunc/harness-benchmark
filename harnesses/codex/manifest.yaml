@@ -12,12 +12,14 @@ setup: |
   cat > ~/.codex/config.toml <<CODEXEOF
   model = "$MODEL_NAME"
   model_provider = "benchmark"
+  model_context_window = 1048576
+  model_max_output_tokens = 131072
 
   [model_providers.benchmark]
   name = "Benchmark Proxy"
   base_url = "$MODEL_URL"
   env_key = "API_KEY"
-  wire_api = "chat"
+  wire_api = "responses"
   CODEXEOF
 
 metric_source: events.jsonl
