@@ -91,6 +91,30 @@ def test_extract_autohand_events(fixtures_dir):
     assert abs(metrics.cost_usd - 0.012) < 0.001
 
 
+def test_extract_codex_events(fixtures_dir):
+    events_file = fixtures_dir / "codex-events.jsonl"
+    metrics = extract_metrics(events_file, format="codex")
+
+    assert metrics.llm_calls == 1  # one turn.completed
+    assert metrics.tool_calls == 2  # command_execution + file_change
+    assert metrics.tokens_input == 1200
+    assert metrics.tokens_output == 300
+    assert metrics.tokens_cached == 450
+
+
+def test_codex_flat_legacy_shape(tmp_path):
+    """Older codex builds emit flat {"type": ...} events — tolerate both."""
+    events_file = tmp_path / "flat.jsonl"
+    events_file.write_text(
+        '{"type":"agent_message","message":"hi"}\n'
+        '{"type":"exec_command","command":"ls"}\n'
+    )
+    metrics = extract_metrics(events_file, format="codex")
+
+    assert metrics.llm_calls == 1
+    assert metrics.tool_calls == 1
+
+
 def test_extract_kimi_events(fixtures_dir):
     events_file = fixtures_dir / "kimi-events.jsonl"
     metrics = extract_metrics(events_file, format="kimi")

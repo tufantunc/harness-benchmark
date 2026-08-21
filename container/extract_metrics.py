@@ -168,6 +168,42 @@ def parse_cline_events(lines: list[str]) -> Metrics:
     return m
 
 
+def parse_codex_events(lines: list[str]) -> Metrics:
+    """Parse codex exec --json output.
+
+    Events are wrapped in a msg envelope: {"id":…,"msg":{"type":…}}.
+    item.completed with item.type command_execution/file_change/mcp_tool_call/
+    web_search/todo_list = tool call; turn.completed = one LLM turn (+ usage).
+    Older builds emit flat {"type": …} events — both shapes are handled.
+    Token/cost data is captured by the logging proxy (authoritative source).
+    """
+    m = Metrics()
+    tool_item_types = (
+        "command_execution", "file_change", "mcp_tool_call",
+        "web_search", "todo_list",
+    )
+    for evt in _iter_events(lines):
+        msg = evt.get("msg", evt)  # unwrap envelope; flat events pass through
+        msg_type = msg.get("type", "")
+        if msg_type == "item.completed":
+            item = msg.get("item", {})
+            if item.get("type") in tool_item_types:
+                m.tool_calls += 1
+        elif msg_type == "turn.completed":
+            usage = msg.get("usage") or {}
+            if not _accumulate_usage(m, {
+                "input_tokens": usage.get("input_tokens", 0),
+                "output_tokens": usage.get("output_tokens", 0),
+                "cache_read_tokens": usage.get("cached_input_tokens", 0),
+            }):
+                m.llm_calls += 1
+        elif msg_type in ("agent_message", "response"):
+            m.llm_calls += 1
+        elif msg_type in ("exec_command", "patch_apply", "mcp_tool_call"):
+            m.tool_calls += 1
+    return m
+
+
 def _best_effort_parser(llm_types: tuple[str, ...], tool_types: tuple[str, ...]):
     """Factory for simple JSONL event parsers.
 
@@ -223,6 +259,7 @@ PARSERS = {
     "grok": parse_grok_events,
     "junie": parse_junie_events,
     "cline": parse_cline_events,
+    "codex": parse_codex_events,
     **{fmt: _best_effort_parser(llm, tool) for fmt, (llm, tool) in _BEST_EFFORT_FORMATS.items()},
 }
 
