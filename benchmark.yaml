@@ -1,6 +1,6 @@
 # benchmark.yaml
 model:
-  url: https://open.bigmodel.cn/api/paas/v4/
+  url: https://api.z.ai/api/coding/paas/v4/
   protocol: openai
   name: glm-5.2
   api_key_env: LLM_API_KEY
