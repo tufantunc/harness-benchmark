@@ -1,4 +1,8 @@
 # harnesses/codex/manifest.yaml
+# PARKED (2026-09-29): codex requires wire_api = "responses" (chat removed
+# Feb 2026, rejected through 0.159.0) but no available upstream serves
+# /responses (BigModel + Z.ai both 404). Not in benchmark.yaml; revive only
+# with a proxy Responses→Chat bridge or a Responses-capable upstream.
 name: codex
 version: "latest"
 install: npm install -g @openai/codex

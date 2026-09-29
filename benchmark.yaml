@@ -19,7 +19,7 @@ run:
   retry_failed: false
   parallel: 1
 
-harnesses: [opencode, pi, grok, junie, cline, kilo, kimi, autohand, crush, goose, dsh, codex]
+harnesses: [opencode, pi, grok, junie, cline, kilo, kimi, autohand, crush, goose, dsh]
 
 docker:
   image: harness:latest

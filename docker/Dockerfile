@@ -25,14 +25,18 @@ RUN npm install -g opencode-ai && \
     npm install -g cline && \
     npm install -g @kilocode/cli && \
     npm install -g @charmland/crush && \
-    npm install -g @deepseek-ai/dsh && \
-    npm install -g @openai/codex
+    npm install -g @deepseek-ai/dsh
+
+# codex: removed — requires Responses API (wire_api=chat removed from codex
+# in Feb 2026, still rejected in 0.159.0) and no available upstream serves
+# /responses (BigModel and Z.ai both 404 with real key). Adapter parked in
+# harnesses/codex/ pending a Responses→Chat bridge or platform support.
 
 # Install Kimi Code CLI (curl installer — SHA256 pins the installer script for
 # reproducibility; update the pin (after verifying the newly served script) when
 # upstream changes it. KIMI_VERSION pins the binary version — update on upgrade.)
 RUN curl -fsSL -o /tmp/kimi-install.sh https://code.kimi.com/kimi-code/install.sh && \
-    echo "7212eb6da4e7d53bb4925cfb84e4a87dbdb123843b2e4afd2c2400b3d0649da3  /tmp/kimi-install.sh" | sha256sum -c - && \
+    echo "270a86f2d2304529b6d8a3783fca9534874ebaeecb6cfcc1aebcdb6ce20ae1d7  /tmp/kimi-install.sh" | sha256sum -c - && \
     KIMI_VERSION=0.38.0 bash /tmp/kimi-install.sh && \
     rm /tmp/kimi-install.sh
 

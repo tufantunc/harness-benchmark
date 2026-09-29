@@ -1,8 +1,17 @@
 # Codex CLI Harness Adapter — Design Spec
 
 **Date:** 2026-08-21
-**Status:** Approved
+**Status:** PARKED 2026-09-29 — removed from benchmark.yaml
 **Parent Spec:** `2026-07-08-harness-benchmark-design.md`
+
+> **Parking note (2026-09-29):** This spec's verification was a false
+> positive — the dummy-key probe could not detect that no upstream actually
+> serves `/responses` (BigModel and Z.ai both return 404 with a real key;
+> auth is checked before routing, so dummy-key probes return 401 for any
+> path). Codex removed `wire_api = "chat"` in Feb 2026 (still rejected in
+> 0.159.0), leaving no viable wire protocol on our platforms. The adapter,
+> parser, and proxy Responses branches remain in the tree for a future
+> revival via a proxy Responses→Chat bridge or a Responses-capable upstream.
 
 ## Overview
 
