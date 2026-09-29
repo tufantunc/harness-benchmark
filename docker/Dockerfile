@@ -47,7 +47,7 @@ RUN curl -fsSL -o /tmp/bun-install.sh https://bun.sh/install && \
     rm /tmp/bun-install.sh && \
     export PATH="/root/.bun/bin:$PATH" && \
     curl -fsSL -o /tmp/autohand-install.sh https://autohand.ai/install.sh && \
-    echo "dd30c1a575e78bf1b8d0932beb9133fbc60f8644db5903ca74e4f210b680f6cb  /tmp/autohand-install.sh" | sha256sum -c - && \
+    echo "e82ab8ffa3f63feb4acc25fb07b28dce4052305a2a68369a18d0c6c816df4d6a  /tmp/autohand-install.sh" | sha256sum -c - && \
     bash /tmp/autohand-install.sh && \
     rm /tmp/autohand-install.sh
 
@@ -56,7 +56,7 @@ RUN curl -fsSL -o /tmp/bun-install.sh https://bun.sh/install && \
 # Install Goose CLI (SHA256 pinned, non-interactive)
 RUN curl -fsSL -o /tmp/goose-cli.sh \
     https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh && \
-    echo "ab5ae40513348ec4e6047cc7338040aab2df5246800c111d22065766ba6013f0  /tmp/goose-cli.sh" | sha256sum -c - && \
+    echo "710f208cf0225ac330f71cc1540d36b10a6be7a850334b5ec4770fe96fbc57c4  /tmp/goose-cli.sh" | sha256sum -c - && \
     CONFIGURE=false bash /tmp/goose-cli.sh < /dev/null && \
     rm /tmp/goose-cli.sh
 ENV PATH="/root/.local/bin:/root/.kimi-code/bin:/root/.bun/bin:${PATH}"
