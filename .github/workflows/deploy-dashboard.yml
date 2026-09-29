@@ -23,6 +23,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Export benchmark data
+        run: python3 scripts/export-data.py
+
       - name: Install dependencies
         run: cd dashboard && npm ci
 
