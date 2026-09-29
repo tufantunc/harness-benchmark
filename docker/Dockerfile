@@ -60,7 +60,7 @@ ENV PATH="/root/.local/bin:/root/.kimi-code/bin:/root/.bun/bin:${PATH}"
 # Install Grok Build (curl installer, not npm)
 # SHA256 pins the installer script for reproducibility — update both when upgrading grok
 RUN curl -fsSL -o /tmp/grok-install.sh https://x.ai/cli/install.sh && \
-    echo "43d0943123edade1383a476a4f778674877acee7c1f98a00f094c4a0f7349321  /tmp/grok-install.sh" | sha256sum -c - && \
+    echo "7fd6fdc75d9418b2e58356726fcbf1ae849416f773925da07d0ccc7a60d3e791  /tmp/grok-install.sh" | sha256sum -c - && \
     bash /tmp/grok-install.sh && \
     rm /tmp/grok-install.sh && \
     grok --version

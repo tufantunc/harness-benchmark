@@ -119,16 +119,15 @@ const server = http.createServer((clientReq, clientRes) => {
 
         fs.writeFileSync(path.join(CAPTURE_DIR, `${reqId}-request.json`), reqBody);
 
-        const upstream = new URL(UPSTREAM.replace(/\/$/, '') + clientReq.url);
-
         // OpenAI-style clients (e.g. goose's openai engine) append /v1 to
         // base URLs that already carry a version segment (bigmodel /api/paas/v4),
         // producing /v4/v1/chat/completions upstream (404). Collapse the
-        // duplicate version prefix.
-        let upstreamPath = upstream.pathname + upstream.search;
-        if (/\/v\d+$/.test(new URL(UPSTREAM.replace(/\/$/, '')).pathname) && upstream.pathname.startsWith('/v1/')) {
-            upstreamPath = upstream.pathname.slice(3) + upstream.search;
+        // duplicate version prefix from the client-side path.
+        let clientPath = clientReq.url;
+        if (/\/v\d+$/.test(new URL(UPSTREAM.replace(/\/$/, '')).pathname) && clientPath.startsWith('/v1/')) {
+            clientPath = clientPath.slice(3) || '/';
         }
+        const upstream = new URL(UPSTREAM.replace(/\/$/, '') + clientPath);
         const isHttps = upstream.protocol === 'https:';
         const lib = isHttps ? https : http;
 
@@ -142,7 +141,7 @@ const server = http.createServer((clientReq, clientRes) => {
             method: clientReq.method,
             hostname: upstream.hostname,
             port: upstream.port || (isHttps ? 443 : 80),
-            path: upstreamPath,
+            path: upstream.pathname + upstream.search,
             headers: headers,
         };
 
