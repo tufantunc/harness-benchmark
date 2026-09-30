@@ -78,3 +78,28 @@ def test_store_skip_existing_check(tmp_path):
     assert store.exists("opencode", "glm-5.2", "python", "leap", 1)
     assert not store.exists("opencode", "glm-5.2", "python", "leap", 2)
     assert not store.exists("pi", "glm-5.2", "python", "leap", 1)
+
+
+def test_store_served_model_roundtrip(tmp_path):
+    """served_model column survives upsert and query (silent model-upgrade detection)."""
+    store = Store(tmp_path / "test.db")
+    store.init_schema()
+
+    result = RunResult(
+        run_id="batch-sm", harness="goose", model="glm-5.2",
+        language="python", exercise="beer-song", repetition=1,
+        success=True, tokens_input=100, tokens_output=10, tokens_cached=0,
+        cost_usd=0.0, duration_sec=10.0, tool_calls=0, llm_calls=1,
+        diff_loc=0, timed_out=False, tampered=False, artifact_path="a/b",
+        served_model="glm-5.3",
+    )
+    store.upsert(result)
+
+    rows = store.query(harness="goose")
+    assert len(rows) == 1
+    assert rows[0].served_model == "glm-5.3"
+
+    # migration: old DBs get the column with empty default
+    result.served_model = ""
+    store.upsert(result)
+    assert store.query(harness="goose")[0].served_model == ""

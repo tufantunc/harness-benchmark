@@ -130,6 +130,7 @@ def run_single(
         tool_schema_tokens=metrics.get("tool_schema_tokens", 0),
         prefix_stable=metrics.get("prefix_stable", True),
         request_count=metrics.get("request_count", 0),
+        served_model=metrics.get("served_model", ""),
     )
     store.upsert(run_result)
 

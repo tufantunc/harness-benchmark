@@ -43,3 +43,22 @@ def test_generate_markdown(tmp_path):
     assert "| opencode |" in md
     assert "| pi |" in md
     assert "glm-5.2" in md
+
+
+def test_leaderboard_reports_served_model(tmp_path):
+    """compute_leaderboard surfaces the served model so cohort mixing is visible."""
+    store = Store(tmp_path / "test.db")
+    store.init_schema()
+    for i, (harness, served) in enumerate([("crush", "glm-5.3"), ("cline", "glm-5.2")]):
+        store.upsert(RunResult(
+            run_id="b", harness=harness, model="glm-5.2", language="python",
+            exercise="beer-song", repetition=1, success=True,
+            tokens_input=1, tokens_output=1, tokens_cached=0, cost_usd=0.0,
+            duration_sec=1.0, tool_calls=0, llm_calls=1, diff_loc=0,
+            timed_out=False, tampered=False, artifact_path="a", served_model=served,
+        ))
+
+    entries = compute_leaderboard(store)
+    by_harness = {e["harness"]: e for e in entries}
+    assert by_harness["crush"]["served_model"] == "glm-5.3"
+    assert by_harness["cline"]["served_model"] == "glm-5.2"

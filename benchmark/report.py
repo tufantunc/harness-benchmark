@@ -41,9 +41,11 @@ def compute_leaderboard(store: Store, model: str | None = None, language: str | 
         tool_schemas = [r.tool_schema_tokens for r in results] if results else [0]
         requests = [r.request_count for r in results] if results else [0]
         stable_count = sum(1 for r in results if r.prefix_stable)
+        served_models = sorted({r.served_model for r in results if r.served_model})
 
         entries.append({
             "harness": harness,
+            "served_model": " + ".join(served_models) if served_models else "—",
             "total_tasks": total,
             "success_rate": round(success_rate, 4),
             "pass_at_k": round(pass_at_k, 4),
@@ -78,12 +80,12 @@ def generate_markdown(leaderboard: list[dict], model: str) -> str:
         "",
         "## Summary",
         "",
-        "| Rank | Harness | Tasks | Success | pass@k | Tokens/Success | Cost/Task | Avg Time | Avg Requests |",
-        "|------|---------|-------|---------|--------|----------------|-----------|----------|--------------|",
+        "| Rank | Harness | Served Model | Tasks | Success | pass@k | Tokens/Success | Cost/Task | Avg Time | Avg Requests |",
+        "|------|---------|--------------|-------|---------|--------|----------------|-----------|----------|--------------|",
     ]
     for e in leaderboard:
         lines.append(
-            f"| {e['rank']} | {e['harness']} | {e['total_tasks']} | "
+            f"| {e['rank']} | {e['harness']} | {e['served_model']} | {e['total_tasks']} | "
             f"{e['success_rate']:.1%} | {e['pass_at_k']:.1%} | "
             f"{e['tokens_per_success']:,} | ${e['avg_cost_per_task']:.4f} | "
             f"{e['avg_duration']:.0f}s | {e['avg_requests']:.1f} |"

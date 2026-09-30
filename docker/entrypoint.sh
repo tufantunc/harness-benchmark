@@ -182,6 +182,7 @@ result = {
     'prefix_stable': proxy.get('prefix_stable', True),
     'prefix_variants': proxy.get('prefix_variants', 0),
     'request_count': proxy.get('request_count', 0),
+    'served_model': proxy.get('served_model', ''),
 }
 print(json.dumps(result))
 "

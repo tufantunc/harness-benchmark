@@ -9,6 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const zlib = require('zlib');
 
 const CAPTURE_DIR = process.argv[2] || '/output/captured-payloads';
 
@@ -27,6 +28,21 @@ function estimateTokens(val) {
 const files = fs.existsSync(CAPTURE_DIR)
     ? fs.readdirSync(CAPTURE_DIR).filter(f => f.endsWith('-request.json')).sort()
     : [];
+
+// Extract the model the API actually served from a captured response body
+// (SSE chunks and plain JSON both carry "model":"..."). This is how silent
+// upstream model aliasing (e.g. glm-5.2 requests served as glm-5.3) surfaces.
+function servedModelFromBody(buf) {
+    let body;
+    try { body = zlib.brotliDecompressSync(buf).toString('utf8'); }
+    catch {
+        try { body = zlib.gunzipSync(buf).toString('utf8'); }
+        catch { body = buf.toString('utf8'); }
+    }
+    const models = new Set();
+    for (const m of body.matchAll(/"model":"([^"]+)"/g)) models.add(m[1]);
+    return models;
+}
 
 if (files.length === 0) {
     console.log(JSON.stringify({
@@ -50,6 +66,7 @@ const systemHashes = new Set();
 const toolsHashes = new Set();
 let firstSystemTokens = 0;
 let firstToolsTokens = 0;
+const servedModels = new Set();
 
 for (const file of files) {
     const prefix = file.replace('-request.json', '');
@@ -112,6 +129,14 @@ for (const file of files) {
             totalOutput += usage.output_tokens || 0;
         } catch {}
     }
+
+    // Collect served model from the first few captured responses
+    const responsePath = path.join(CAPTURE_DIR, `${prefix}-response.raw`);
+    if (servedModels.size === 0 && fs.existsSync(responsePath)) {
+        try {
+            for (const m of servedModelFromBody(fs.readFileSync(responsePath))) servedModels.add(m);
+        } catch {}
+    }
 }
 
 const result = {
@@ -124,6 +149,7 @@ const result = {
     prefix_stable: systemHashes.size <= 1 && toolsHashes.size <= 1,
     prefix_variants: Math.max(systemHashes.size, toolsHashes.size),
     request_count: files.length,
+    served_model: [...servedModels].sort().join('+'),
 };
 
 console.log(JSON.stringify(result, null, 2));

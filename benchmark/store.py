@@ -33,6 +33,7 @@ class RunResult:
     tool_schema_tokens: int = 0
     prefix_stable: bool = True
     request_count: int = 0
+    served_model: str = ""
 
 
 SCHEMA = """
@@ -68,6 +69,7 @@ MIGRATIONS = {
     "tool_schema_tokens": "INTEGER NOT NULL DEFAULT 0",
     "prefix_stable": "BOOLEAN NOT NULL DEFAULT 1",
     "request_count": "INTEGER NOT NULL DEFAULT 0",
+    "served_model": "TEXT NOT NULL DEFAULT ''",
 }
 
 
@@ -92,8 +94,9 @@ class Store:
                     success, tokens_input, tokens_output, tokens_cached, cost_usd,
                     duration_sec, tool_calls, llm_calls, diff_loc, timed_out, tampered,
                     artifact_path, cache_write_tokens, cache_read_tokens,
-                    system_prompt_tokens, tool_schema_tokens, prefix_stable, request_count)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    system_prompt_tokens, tool_schema_tokens, prefix_stable, request_count,
+                    served_model)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(harness, model, language, exercise, repetition)
                 DO UPDATE SET
                     run_id=excluded.run_id,
@@ -115,6 +118,7 @@ class Store:
                     tool_schema_tokens=excluded.tool_schema_tokens,
                     prefix_stable=excluded.prefix_stable,
                     request_count=excluded.request_count,
+                    served_model=excluded.served_model,
                     created_at=CURRENT_TIMESTAMP
                 """,
                 (
@@ -127,6 +131,7 @@ class Store:
                     result.cache_write_tokens, result.cache_read_tokens,
                     result.system_prompt_tokens, result.tool_schema_tokens,
                     result.prefix_stable, result.request_count,
+                    result.served_model,
                 ),
             )
 
@@ -181,6 +186,7 @@ class Store:
             tool_schema_tokens=r["tool_schema_tokens"] if "tool_schema_tokens" in r.keys() else 0,
             prefix_stable=bool(r["prefix_stable"]) if "prefix_stable" in r.keys() else True,
             request_count=r["request_count"] if "request_count" in r.keys() else 0,
+            served_model=r["served_model"] if "served_model" in r.keys() else "",
         )
 
     def query(
