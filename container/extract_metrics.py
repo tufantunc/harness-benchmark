@@ -206,6 +206,28 @@ def parse_codex_events(lines: list[str]) -> Metrics:
     return m
 
 
+def parse_qwen_events(lines: list[str]) -> Metrics:
+    """Parse qwen -o stream-json output.
+
+    Verified against a live container run: assistant events carry
+    message.content blocks (thinking/text/tool_use) and a usage dict
+    ({input_tokens, output_tokens} — zeros on z.ai, proxy is authoritative);
+    user events carry tool_result blocks (NOT counted — tool_use on the
+    assistant side already counts each call exactly once).
+    """
+    m = Metrics()
+    for evt in _iter_events(lines):
+        if evt.get("type") != "assistant":
+            continue
+        msg = evt.get("message", {})
+        if not _accumulate_usage(m, msg.get("usage") or {}):
+            m.llm_calls += 1
+        for block in msg.get("content", []):
+            if isinstance(block, dict) and block.get("type") == "tool_use":
+                m.tool_calls += 1
+    return m
+
+
 def _best_effort_parser(llm_types: tuple[str, ...], tool_types: tuple[str, ...]):
     """Factory for simple JSONL event parsers.
 
@@ -262,6 +284,7 @@ PARSERS = {
     "junie": parse_junie_events,
     "cline": parse_cline_events,
     "codex": parse_codex_events,
+    "qwen": parse_qwen_events,
     **{fmt: _best_effort_parser(llm, tool) for fmt, (llm, tool) in _BEST_EFFORT_FORMATS.items()},
 }
 

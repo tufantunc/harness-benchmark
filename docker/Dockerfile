@@ -25,7 +25,8 @@ RUN npm install -g opencode-ai && \
     npm install -g cline && \
     npm install -g @kilocode/cli && \
     npm install -g @charmland/crush && \
-    npm install -g @deepseek-ai/dsh
+    npm install -g @deepseek-ai/dsh && \
+    npm install -g @qwen-code/qwen-code
 
 # codex: removed — requires Responses API (wire_api=chat removed from codex
 # in Feb 2026, still rejected in 0.159.0) and no available upstream serves

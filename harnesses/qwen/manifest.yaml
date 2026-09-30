@@ -1,0 +1,15 @@
+# harnesses/qwen/manifest.yaml
+name: qwen
+version: "latest"
+install: npm install -g @qwen-code/qwen-code
+
+invoke:
+  command: qwen --auth-type openai --approval-mode yolo -o stream-json "$PROMPT"
+  model_flag: -m $MODEL_NAME
+
+# No config file needed: adapter.sh exports OPENAI_BASE_URL/OPENAI_API_KEY
+# (read by qwen's built-in "openai" auth type). The modelProviders settings
+# path crashes in 0.24.7 (resolveModelConfig TypeError on custom providers).
+
+metric_source: events.jsonl
+metric_format: qwen

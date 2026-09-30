@@ -166,3 +166,14 @@ def test_extract_kimi_events(fixtures_dir):
     assert metrics.tokens_output == 250
     assert metrics.tokens_cached == 5500
     assert abs(metrics.cost_usd - 0.011) < 0.001
+
+
+def test_extract_qwen_events(fixtures_dir):
+    """qwen -o stream-json: tool_use blocks count tools, assistant events count
+    llm turns; user-side tool_result blocks must NOT double-count."""
+    events_file = fixtures_dir / "qwen-events.jsonl"
+    metrics = extract_metrics(events_file, format="qwen")
+
+    assert metrics.llm_calls >= 2  # two assistant turns (one w/ usage, one w/o)
+    assert metrics.tool_calls >= 1  # at least one tool_use block
+    assert metrics.cost_usd == 0.0  # proxy-authoritative
