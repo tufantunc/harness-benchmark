@@ -20,7 +20,7 @@ RUN npm init -y && \
 
 # Install harness CLIs globally
 RUN npm install -g opencode-ai && \
-    npm install -g --ignore-scripts @earendil-works/pi-coding-agent && \
+    npm install -g --ignore-scripts @earendil-works/pi-coding-agent@1.0.1 && \
     npm install -g @jetbrains/junie && \
     npm install -g cline && \
     npm install -g @kilocode/cli && \
@@ -48,8 +48,8 @@ RUN curl -fsSL -o /tmp/bun-install.sh https://bun.sh/install && \
     rm /tmp/bun-install.sh && \
     export PATH="/root/.bun/bin:$PATH" && \
     curl -fsSL -o /tmp/autohand-install.sh https://autohand.ai/install.sh && \
-    echo "e82ab8ffa3f63feb4acc25fb07b28dce4052305a2a68369a18d0c6c816df4d6a  /tmp/autohand-install.sh" | sha256sum -c - && \
-    bash /tmp/autohand-install.sh && \
+    echo "c0f7a3975cc0dc7ade014e83118610d4f3ea4f06fe703568d6485fa140c5011a  /tmp/autohand-install.sh" | sha256sum -c - && \
+    AUTOHAND_SKIP_COMPUTER_CONTROL_INSTALL=1 bash /tmp/autohand-install.sh && \
     rm /tmp/autohand-install.sh
 
 # droid: removed — requires Factory auth even for BYOK (spec 2026-07-29, decision 3)
