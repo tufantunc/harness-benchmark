@@ -9,7 +9,7 @@ MODEL_FLAG="$3"
 PROMPT=$(cat "$PROMPT_FILE")
 
 cd "$WORKDIR"
-dsh --profile headless "$PROMPT" \
+dsh --profile headless --json "$PROMPT" \
     > /output/events.jsonl 2>/output/agent-stderr.log
 
 echo $? > /output/agent-exit-code

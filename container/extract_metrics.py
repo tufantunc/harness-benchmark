@@ -206,6 +206,28 @@ def parse_codex_events(lines: list[str]) -> Metrics:
     return m
 
 
+def parse_dsh_events(lines: list[str]) -> Metrics:
+    """Parse dsh --profile headless --json output.
+
+    Verified against a live container run. Events: session (open), status
+    ({phase, turn} — turn numbers delimit llm turns), thinking, tool_call
+    (counted), tool_result (not counted — call side already counted), text,
+    final. No usage in events; token/cost data comes from the proxy.
+    """
+    m = Metrics()
+    turns: set = set()
+    for evt in _iter_events(lines):
+        evt_type = evt.get("type", "")
+        if evt_type == "tool_call":
+            m.tool_calls += 1
+        elif evt_type == "status":
+            turn = evt.get("turn")
+            if turn is not None:
+                turns.add(turn)
+    m.llm_calls = len(turns)
+    return m
+
+
 def parse_qwen_events(lines: list[str]) -> Metrics:
     """Parse qwen -o stream-json output.
 
@@ -270,10 +292,6 @@ _BEST_EFFORT_FORMATS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
         ("message", "assistant", "response"),
         ("tool_call", "tool_use", "tool_execution", "action"),
     ),
-    "dsh": (
-        ("message", "assistant", "response", "answer"),
-        ("tool_call", "tool_use", "tool_execution", "action"),
-    ),
 }
 
 
@@ -285,6 +303,7 @@ PARSERS = {
     "cline": parse_cline_events,
     "codex": parse_codex_events,
     "qwen": parse_qwen_events,
+    "dsh": parse_dsh_events,
     **{fmt: _best_effort_parser(llm, tool) for fmt, (llm, tool) in _BEST_EFFORT_FORMATS.items()},
 }
 

@@ -177,3 +177,15 @@ def test_extract_qwen_events(fixtures_dir):
     assert metrics.llm_calls >= 2  # two assistant turns (one w/ usage, one w/o)
     assert metrics.tool_calls >= 1  # at least one tool_use block
     assert metrics.cost_usd == 0.0  # proxy-authoritative
+
+
+def test_extract_dsh_events(fixtures_dir):
+    """dsh --profile headless --json: tool_call events count tools; distinct
+    status.turn values count llm turns (proxy stays authoritative for tokens)."""
+    events_file = fixtures_dir / "dsh-events.jsonl"
+    metrics = extract_metrics(events_file, format="dsh")
+
+    assert metrics.tool_calls == 4  # tool_call events in fixture
+    assert metrics.llm_calls == 1   # single distinct status.turn
+    assert metrics.tokens_input == 0  # no usage in events; proxy-authoritative
+    assert metrics.cost_usd == 0.0

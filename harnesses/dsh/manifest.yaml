@@ -4,23 +4,28 @@ version: "latest"
 install: npm install -g @deepseek-ai/dsh
 
 invoke:
-  command: dsh --profile headless "$PROMPT"
+  command: dsh --profile headless --json "$PROMPT"
   model_flag: ""
 
+# rc.6+ reads machine-local settings from $DSH_HOME/cordis.patch.yml as a
+# patch-list over the profile's plugin tree (the old ~/.dsh/settings.yaml
+# shape is ignored). Two entries: provider catalog + default-model routing.
 setup: |
   mkdir -p ~/.dsh
-  cat > ~/.dsh/settings.yaml <<DSHEOF
-  agent-default-model:
-    provider: benchmark
-    model: "$MODEL_NAME"
-  llm-pi-ai:
-    providers:
-      benchmark:
-        apiKeyEnv: LLM_API_KEY
-        api: openai-completions
-        baseURL: "$MODEL_URL"
-        models:
-          - id: "$MODEL_NAME"
+  cat > ~/.dsh/cordis.patch.yml <<DSHEOF
+  - id: agent-default-model
+    config:
+      provider: benchmark
+      model: "$MODEL_NAME"
+  - id: llm-pi-ai
+    config:
+      providers:
+        benchmark:
+          apiKeyEnv: LLM_API_KEY
+          api: openai-completions
+          baseURL: "$MODEL_URL"
+          models:
+            - id: "$MODEL_NAME"
   DSHEOF
 
 metric_source: events.jsonl
