@@ -26,7 +26,8 @@ RUN npm install -g opencode-ai && \
     npm install -g @kilocode/cli && \
     npm install -g @charmland/crush && \
     npm install -g @deepseek-ai/dsh && \
-    npm install -g @qwen-code/qwen-code
+    npm install -g @qwen-code/qwen-code && \
+    npm install -g @github/copilot
 
 # codex: removed — requires Responses API (wire_api=chat removed from codex
 # in Feb 2026, still rejected in 0.159.0) and no available upstream serves
@@ -48,7 +49,7 @@ RUN curl -fsSL -o /tmp/bun-install.sh https://bun.sh/install && \
     rm /tmp/bun-install.sh && \
     export PATH="/root/.bun/bin:$PATH" && \
     curl -fsSL -o /tmp/autohand-install.sh https://autohand.ai/install.sh && \
-    echo "c0f7a3975cc0dc7ade014e83118610d4f3ea4f06fe703568d6485fa140c5011a  /tmp/autohand-install.sh" | sha256sum -c - && \
+    echo "f9185f41e935c20b70d949a54b3d4945d1cfecf1eed28d720f0e7a7ef56566cf  /tmp/autohand-install.sh" | sha256sum -c - && \
     AUTOHAND_SKIP_COMPUTER_CONTROL_INSTALL=1 bash /tmp/autohand-install.sh && \
     rm /tmp/autohand-install.sh
 

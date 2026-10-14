@@ -1,0 +1,16 @@
+# harnesses/copilot/manifest.yaml
+name: copilot
+version: "latest"
+install: npm install -g @github/copilot
+
+invoke:
+  command: copilot -p "$PROMPT" --allow-all-tools --allow-all-paths --output-format json
+  model_flag: --model $MODEL_NAME
+
+# No config file: adapter.sh exports COPILOT_PROVIDER_* env vars (BYOK).
+# "GitHub authentication is not required when using a custom provider"
+# (copilot help providers). ~/.copilot/providers.json would override env —
+# the container has none.
+
+metric_source: events.jsonl
+metric_format: copilot

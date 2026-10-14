@@ -225,6 +225,24 @@ def parse_dsh_events(lines: list[str]) -> Metrics:
     return m
 
 
+def parse_copilot_events(lines: list[str]) -> Metrics:
+    """Parse copilot -p --output-format json (JSONL) output.
+
+    Verified against a live container run. Events carry top-level `type` +
+    nested `data`. model.call_start = one model round-trip; tool.execution_
+    start = one tool call (execution_complete not counted — would double).
+    Usage is not carried in events; the proxy is authoritative for tokens.
+    """
+    m = Metrics()
+    for evt in _iter_events(lines):
+        evt_type = evt.get("type", "")
+        if evt_type == "model.call_start":
+            m.llm_calls += 1
+        elif evt_type == "tool.execution_start":
+            m.tool_calls += 1
+    return m
+
+
 def parse_qwen_events(lines: list[str]) -> Metrics:
     """Parse qwen -o stream-json output.
 
@@ -301,6 +319,7 @@ PARSERS = {
     "codex": parse_codex_events,
     "qwen": parse_qwen_events,
     "dsh": parse_dsh_events,
+    "copilot": parse_copilot_events,
     **{fmt: _best_effort_parser(llm, tool) for fmt, (llm, tool) in _BEST_EFFORT_FORMATS.items()},
 }
 

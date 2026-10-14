@@ -190,3 +190,15 @@ def test_extract_dsh_events(fixtures_dir):
     assert metrics.llm_calls >= 1   # step_start events within one turn
     assert metrics.tokens_input == 0  # no usage in events; proxy-authoritative
     assert metrics.cost_usd == 0.0
+
+
+def test_extract_copilot_events(fixtures_dir):
+    """copilot --output-format json: model.call_start = llm calls,
+    tool.execution_start = tool calls (each counted once per call)."""
+    events_file = fixtures_dir / "copilot-events.jsonl"
+    metrics = extract_metrics(events_file, format="copilot")
+
+    assert metrics.llm_calls == 1   # one model.call_start in fixture
+    assert metrics.tool_calls == 1  # one tool.execution_start in fixture
+    assert metrics.tokens_input == 0  # no usage in events; proxy-authoritative
+    assert metrics.cost_usd == 0.0
