@@ -202,3 +202,25 @@ def test_extract_copilot_events(fixtures_dir):
     assert metrics.tool_calls == 1  # one tool.execution_start in fixture
     assert metrics.tokens_input == 0  # no usage in events; proxy-authoritative
     assert metrics.cost_usd == 0.0
+
+
+def test_copilot_counts_accumulate_without_double_count(tmp_path):
+    """Multiple call_start/execution_start events accumulate; the _finished/
+    _complete counterparts and assistant.toolRequests must not add."""
+    events_file = tmp_path / "copilot-multi.jsonl"
+    events_file.write_text(
+        '{"type":"model.call_start","data":{"turnId":"0"}}\n'
+        '{"type":"tool.execution_start","data":{"toolCallId":"c1"}}\n'
+        '{"type":"tool.execution_complete","data":{"toolCallId":"c1"}}\n'
+        '{"type":"model.call_finished","data":{"outcome":"success"}}\n'
+        '{"type":"assistant.message","data":{"toolRequests":[{"toolCallId":"c2"}]}}\n'
+        '{"type":"model.call_start","data":{"turnId":"1"}}\n'
+        '{"type":"tool.execution_start","data":{"toolCallId":"c2"}}\n'
+        '{"type":"tool.execution_complete","data":{"toolCallId":"c2"}}\n'
+        '{"type":"model.call_finished","data":{"outcome":"success"}}\n'
+        '{"type":"result","data":null}\n'
+    )
+    metrics = extract_metrics(events_file, format="copilot")
+
+    assert metrics.llm_calls == 2   # call_finished must not add
+    assert metrics.tool_calls == 2  # execution_complete + toolRequests must not add

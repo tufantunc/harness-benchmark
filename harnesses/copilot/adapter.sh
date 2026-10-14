@@ -18,6 +18,7 @@ copilot -p "$PROMPT" \
     $MODEL_FLAG \
     --allow-all-tools \
     --allow-all-paths \
+    --no-auto-update \
     --output-format json \
     > /output/events.jsonl 2>/output/agent-stderr.log
 

@@ -229,9 +229,11 @@ def parse_copilot_events(lines: list[str]) -> Metrics:
     """Parse copilot -p --output-format json (JSONL) output.
 
     Verified against a live container run. Events carry top-level `type` +
-    nested `data`. model.call_start = one model round-trip; tool.execution_
-    start = one tool call (execution_complete not counted — would double).
-    Usage is not carried in events; the proxy is authoritative for tokens.
+    nested `data`. model.call_start = one model round-trip;
+    tool.execution_start = one tool call (their _finished/_complete
+    counterparts and assistant.message toolRequests are not counted —
+    would double). Usage is not carried in events; the proxy is
+    authoritative for tokens.
     """
     m = Metrics()
     for evt in _iter_events(lines):

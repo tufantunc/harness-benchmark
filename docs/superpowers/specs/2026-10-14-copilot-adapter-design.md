@@ -43,9 +43,13 @@ GitHub-side features (`/delegate`) requiring sign-in are irrelevant here.
 
 ```bash
 copilot -p "$PROMPT" --model "$MODEL_NAME" \
-    --allow-all-tools --allow-all-paths --output-format json \
+    --allow-all-tools --allow-all-paths --no-auto-update --output-format json \
     > /output/events.jsonl
 ```
+
+`--no-auto-update` matters: self-update defaults to ON (verified in the
+binary — disabled only via this flag or `COPILOT_AUTO_UPDATE=false`),
+which would allow runtime code swaps inside benchmark containers.
 
 ## Verification methodology
 

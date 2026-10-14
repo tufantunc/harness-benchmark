@@ -27,7 +27,7 @@ RUN npm install -g opencode-ai && \
     npm install -g @charmland/crush && \
     npm install -g @deepseek-ai/dsh && \
     npm install -g @qwen-code/qwen-code && \
-    npm install -g @github/copilot
+    npm install -g @github/copilot@1.0.97
 
 # codex: removed — requires Responses API (wire_api=chat removed from codex
 # in Feb 2026, still rejected in 0.159.0) and no available upstream serves

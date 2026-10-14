@@ -4,7 +4,7 @@ version: "latest"
 install: npm install -g @github/copilot
 
 invoke:
-  command: copilot -p "$PROMPT" --allow-all-tools --allow-all-paths --output-format json
+  command: copilot -p "$PROMPT" --allow-all-tools --allow-all-paths --no-auto-update --output-format json
   model_flag: --model $MODEL_NAME
 
 # No config file: adapter.sh exports COPILOT_PROVIDER_* env vars (BYOK).
