@@ -245,6 +245,27 @@ def parse_copilot_events(lines: list[str]) -> Metrics:
     return m
 
 
+def parse_omp_events(lines: list[str]) -> Metrics:
+    """Parse omp -p --mode json output.
+
+    Verified against a live container run. pi-family schema: message_end
+    events carry the full usage object on assistant messages
+    ({input, output, cacheRead, cacheWrite, cost} — handled by
+    _accumulate_usage); tool_execution_start counts tool calls (the
+    _update/_end counterparts are not counted — would double).
+    """
+    m = Metrics()
+    for evt in _iter_events(lines):
+        evt_type = evt.get("type", "")
+        if evt_type == "message_end":
+            msg = evt.get("message", {})
+            if msg.get("role") == "assistant":
+                _accumulate_usage(m, msg.get("usage") or {})
+        elif evt_type == "tool_execution_start":
+            m.tool_calls += 1
+    return m
+
+
 def parse_qwen_events(lines: list[str]) -> Metrics:
     """Parse qwen -o stream-json output.
 
@@ -322,6 +343,7 @@ PARSERS = {
     "qwen": parse_qwen_events,
     "dsh": parse_dsh_events,
     "copilot": parse_copilot_events,
+    "omp": parse_omp_events,
     **{fmt: _best_effort_parser(llm, tool) for fmt, (llm, tool) in _BEST_EFFORT_FORMATS.items()},
 }
 

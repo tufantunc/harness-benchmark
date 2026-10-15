@@ -71,6 +71,13 @@ RUN curl -fsSL -o /tmp/grok-install.sh https://x.ai/cli/install.sh && \
     rm /tmp/grok-install.sh && \
     grok --version
 
+# Install omp / oh-my-pi (pinned release binary, SHA256 from the GitHub release digest)
+RUN curl -fsSL -o /usr/local/bin/omp \
+    https://github.com/can1357/oh-my-pi/releases/download/v18.11.0/omp-linux-arm64 && \
+    echo "299e0b63c482d78f00f2bae75000815ad6890cb6192cbc9f66c8d98e9ce70b80  /usr/local/bin/omp" | sha256sum -c - && \
+    chmod +x /usr/local/bin/omp && \
+    omp --version
+
 # Copy container helpers
 COPY container/ /app/container/
 COPY docker/entrypoint.sh /app/entrypoint.sh

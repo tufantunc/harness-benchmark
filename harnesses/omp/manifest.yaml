@@ -1,0 +1,29 @@
+# harnesses/omp/manifest.yaml
+name: omp
+version: "18.11.0"
+install: curl release binary (pinned SHA256) — see docker/Dockerfile
+
+invoke:
+  command: omp -p "$PROMPT" --mode json --approval-mode yolo
+  model_flag: --model benchmark/$MODEL_NAME
+
+setup: |
+  mkdir -p ~/.omp/agent
+  cat > ~/.omp/agent/models.yml <<OMPEOF
+  providers:
+    benchmark:
+      baseUrl: "$MODEL_URL"
+      api: openai-completions
+      apiKey: "$API_KEY"
+      models:
+        - id: "$MODEL_NAME"
+          contextWindow: 1048576
+          maxTokens: 131072
+  OMPEOF
+  cat > ~/.omp/agent/config.yml <<OMPEOF
+  modelRoles:
+    default: benchmark/$MODEL_NAME
+  OMPEOF
+
+metric_source: events.jsonl
+metric_format: omp

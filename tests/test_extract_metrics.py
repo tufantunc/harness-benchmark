@@ -224,3 +224,15 @@ def test_copilot_counts_accumulate_without_double_count(tmp_path):
 
     assert metrics.llm_calls == 2   # call_finished must not add
     assert metrics.tool_calls == 2  # execution_complete + toolRequests must not add
+
+
+def test_extract_omp_events(fixtures_dir):
+    """omp -p --mode json (pi-family): assistant message_end events carry
+    usage (input/output/cacheRead/cost); tool_execution_start counts tools."""
+    events_file = fixtures_dir / "omp-events.jsonl"
+    metrics = extract_metrics(events_file, format="omp")
+
+    assert metrics.llm_calls >= 1   # assistant message_end with usage
+    assert metrics.tool_calls == 2  # execution_start only (end would double)
+    assert metrics.tokens_input > 0  # usage parsed from events (pi-style)
+    assert metrics.cost_usd >= 0.0
