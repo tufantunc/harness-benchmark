@@ -228,11 +228,40 @@ def test_copilot_counts_accumulate_without_double_count(tmp_path):
 
 def test_extract_omp_events(fixtures_dir):
     """omp -p --mode json (pi-family): assistant message_end events carry
-    usage (input/output/cacheRead/cost); tool_execution_start counts tools."""
+    usage (input/output/cacheRead/cost); tool_execution_start counts tools.
+    Fixture distractors (turn_end duplicate usage, agent_end replay,
+    user/toolResult null-usage, execution_end) must not add."""
     events_file = fixtures_dir / "omp-events.jsonl"
     metrics = extract_metrics(events_file, format="omp")
 
-    assert metrics.llm_calls >= 1   # assistant message_end with usage
+    assert metrics.llm_calls == 1   # exactly one assistant message_end w/ usage
     assert metrics.tool_calls == 2  # execution_start only (end would double)
-    assert metrics.tokens_input > 0  # usage parsed from events (pi-style)
-    assert metrics.cost_usd >= 0.0
+    assert metrics.tokens_input == 10139
+    assert metrics.tokens_output == 109
+    assert metrics.tokens_cached == 0   # turn_end/agent_end cacheRead must not leak
+    assert abs(metrics.cost_usd - 0.0146742) < 1e-6
+
+
+def test_omp_counts_accumulate_without_double_count(tmp_path):
+    """Multiple assistant message_end usages sum; turn_end's duplicate and
+    agent_end's replayed messages must not add; _update/_end don't count."""
+    events_file = tmp_path / "omp-multi.jsonl"
+    events_file.write_text(
+        '{"type":"message_end","message":{"role":"user","usage":null,"content":[{"type":"text"}]}}\n'
+        '{"type":"message_end","message":{"role":"assistant","usage":{"input":100,"output":10,"cacheRead":50,"cost":{"total":0.001}},"content":[{"type":"thinking"},{"type":"toolCall"}]}}\n'
+        '{"type":"tool_execution_start","toolCallId":"c1","toolName":"bash"}\n'
+        '{"type":"tool_execution_update","toolCallId":"c1"}\n'
+        '{"type":"tool_execution_end","toolCallId":"c1"}\n'
+        '{"type":"message_end","message":{"role":"toolResult","usage":null,"content":[{"type":"text"}]}}\n'
+        '{"type":"turn_end","message":{"role":"assistant","usage":{"input":100,"output":10,"cacheRead":50,"cost":{"total":0.001}}}}\n'
+        '{"type":"message_end","message":{"role":"assistant","usage":{"input":200,"output":20,"cacheRead":70,"cost":{"total":0.002}},"content":[{"type":"text"}]}}\n'
+        '{"type":"agent_end","messages":[{"role":"assistant","usage":{"input":300}}]}\n'
+    )
+    metrics = extract_metrics(events_file, format="omp")
+
+    assert metrics.llm_calls == 2        # two assistant message_end w/ usage
+    assert metrics.tool_calls == 1       # update/end must not add
+    assert metrics.tokens_input == 300   # 100+200; turn_end/agent_end must not add
+    assert metrics.tokens_output == 30
+    assert metrics.tokens_cached == 120  # 50+70
+    assert abs(metrics.cost_usd - 0.003) < 1e-9
