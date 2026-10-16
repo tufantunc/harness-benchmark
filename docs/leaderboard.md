@@ -47,10 +47,10 @@
 
 | Rank | Harness | Served Model | Tasks | Success | pass@k | Tokens/Success | Cost/Task | Avg Time | Avg Requests |
 |------|---------|--------------|-------|---------|--------|----------------|-----------|----------|--------------|
-| 1 | claude | glm-5.3 | 49 | 63.3% | 70.6% | 28,497 | $0.0000 | 182s | 9.6 |
+| 1 | claude | glm-5.3 | 120 | 70.8% | 80.0% | 27,538 | $0.0000 | 222s | 8.0 |
 
 ## Cache & Overhead
 
 | Harness | Cache Write | Cache Read | Sys Prompt | Tool Schemas | Prefix Stable |
 |---------|-------------|------------|------------|--------------|---------------|
-| claude | 0 | 143,916 | 1,440 | 11,797 | 100% |
+| claude | 0 | 180,803 | 1,260 | 10,322 | 100% |
