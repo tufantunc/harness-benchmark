@@ -139,6 +139,17 @@ for (const file of files) {
     }
 }
 
+// Fallback for endpoints whose SSE emulation omits the model field entirely
+// (z.ai's anthropic-compatible messages): take it from the first request
+// body. Only fires when NO response carried a model — aliased OpenAI
+// endpoints always do, so this never masks a silent upgrade.
+if (servedModels.size === 0 && files.length > 0) {
+    try {
+        const reqJson = JSON.parse(fs.readFileSync(path.join(CAPTURE_DIR, files[0]), 'utf8'));
+        if (typeof reqJson.model === 'string' && reqJson.model) servedModels.add(reqJson.model);
+    } catch {}
+}
+
 const result = {
     input_tokens: totalInput,
     output_tokens: totalOutput,

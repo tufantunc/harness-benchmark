@@ -64,9 +64,12 @@ MANIFEST="$HARNESS_DIR/manifest.yaml"
 export PROTOCOL MODEL_NAME
 export API_KEY="${LLM_API_KEY:-}"
 
-# Start logging proxy (transparent to agent: agent → proxy → real API)
-REAL_MODEL_URL="${MODEL_URL:-}"
-export UPSTREAM_URL="$REAL_MODEL_URL"
+# Start logging proxy (transparent to agent: agent → proxy → real API).
+# proxy_upstream (optional manifest key) overrides where the proxy forwards
+# to — used by harnesses that need a different protocol endpoint than the
+# shared MODEL_URL (e.g. claude → z.ai's Anthropic-compatible URL).
+PROXY_UPSTREAM=$(yaml_get "$MANIFEST" "proxy_upstream" "${MODEL_URL:-}")
+export UPSTREAM_URL="$PROXY_UPSTREAM"
 export CAPTURE_DIR="$OUTPUT/captured-payloads"
 export PROXY_PORT=8080
 node /app/container/proxy.js > "$OUTPUT/proxy.log" 2>&1 &

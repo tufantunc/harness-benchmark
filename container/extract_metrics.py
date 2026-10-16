@@ -266,6 +266,26 @@ def parse_omp_events(lines: list[str]) -> Metrics:
     return m
 
 
+def parse_claude_events(lines: list[str]) -> Metrics:
+    """Parse claude -p --output-format stream-json output.
+
+    Verified against a live container run. Events: system (init noise —
+    thousands of lines), assistant (message.content blocks; tool_use =
+    tool call), user (tool_result — not counted), result. z.ai's
+    anthropic-compatible SSE emulation omits usage in stream-json events
+    (zeros) — llm_calls stays 0 so the proxy request_count fallback wins;
+    tokens come from the proxy's SSE extractor.
+    """
+    m = Metrics()
+    for evt in _iter_events(lines):
+        if evt.get("type") != "assistant":
+            continue
+        for block in evt.get("message", {}).get("content", []):
+            if isinstance(block, dict) and block.get("type") == "tool_use":
+                m.tool_calls += 1
+    return m
+
+
 def parse_qwen_events(lines: list[str]) -> Metrics:
     """Parse qwen -o stream-json output.
 
@@ -344,6 +364,7 @@ PARSERS = {
     "dsh": parse_dsh_events,
     "copilot": parse_copilot_events,
     "omp": parse_omp_events,
+    "claude": parse_claude_events,
     **{fmt: _best_effort_parser(llm, tool) for fmt, (llm, tool) in _BEST_EFFORT_FORMATS.items()},
 }
 

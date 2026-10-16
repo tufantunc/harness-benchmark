@@ -2,7 +2,7 @@
 model:
   url: https://api.z.ai/api/coding/paas/v4/
   protocol: openai
-  name: glm-5.2
+  name: glm-5.3
   api_key_env: LLM_API_KEY
 
 task:
@@ -19,7 +19,7 @@ run:
   retry_failed: false
   parallel: 1
 
-harnesses: [opencode, pi, grok, junie, cline, kilo, kimi, autohand, crush, goose, dsh, qwen, copilot, omp]
+harnesses: [opencode, pi, grok, junie, cline, kilo, kimi, autohand, crush, goose, dsh, qwen, copilot, omp, claude]
 
 docker:
   image: harness:latest

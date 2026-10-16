@@ -265,3 +265,16 @@ def test_omp_counts_accumulate_without_double_count(tmp_path):
     assert metrics.tokens_output == 30
     assert metrics.tokens_cached == 120  # 50+70
     assert abs(metrics.cost_usd - 0.003) < 1e-9
+
+
+def test_extract_claude_events(fixtures_dir):
+    """claude -p --output-format stream-json: tool_use blocks count tool
+    calls; user-side tool_result blocks must not double. z.ai's anthropic
+    SSE emulation omits usage in events (zeros) — llm_calls stays 0 for the
+    proxy request_count fallback."""
+    events_file = fixtures_dir / "claude-events.jsonl"
+    metrics = extract_metrics(events_file, format="claude")
+
+    assert metrics.tool_calls >= 1   # tool_use blocks in fixture
+    assert metrics.llm_calls == 0    # no usage signal; proxy-authoritative
+    assert metrics.cost_usd == 0.0

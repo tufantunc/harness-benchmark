@@ -1,0 +1,18 @@
+# harnesses/claude/manifest.yaml
+name: claude
+version: "latest"
+install: npm install -g @anthropic-ai/claude-code
+
+# Claude Code speaks the Anthropic Messages protocol; the proxy upstream
+# must point at z.ai's anthropic-compatible endpoint instead of the shared
+# coding (OpenAI) URL. Read by entrypoint.sh; defaults to MODEL_URL.
+proxy_upstream: https://api.z.ai/api/anthropic
+
+invoke:
+  command: claude -p "$PROMPT" --output-format stream-json --verbose --dangerously-skip-permissions
+  model_flag: --model $MODEL_NAME
+
+# No config file: adapter.sh exports ANTHROPIC_* env vars (qwen/copilot pattern).
+
+metric_source: events.jsonl
+metric_format: claude
