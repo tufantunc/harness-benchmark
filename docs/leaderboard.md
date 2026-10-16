@@ -37,3 +37,20 @@
 | goose | 0 | 0 | 1,087 | 3,388 | 100% |
 | grok | 0 | 0 | 1,301 | 9,797 | 100% |
 | pi | 0 | 0 | 658 | 694 | 100% |
+
+
+---
+
+# Leaderboard — glm-5.3
+
+## Summary
+
+| Rank | Harness | Served Model | Tasks | Success | pass@k | Tokens/Success | Cost/Task | Avg Time | Avg Requests |
+|------|---------|--------------|-------|---------|--------|----------------|-----------|----------|--------------|
+| 1 | claude | glm-5.3 | 49 | 63.3% | 70.6% | 28,497 | $0.0000 | 182s | 9.6 |
+
+## Cache & Overhead
+
+| Harness | Cache Write | Cache Read | Sys Prompt | Tool Schemas | Prefix Stable |
+|---------|-------------|------------|------------|--------------|---------------|
+| claude | 0 | 143,916 | 1,440 | 11,797 | 100% |
