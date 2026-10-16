@@ -275,6 +275,7 @@ def test_extract_claude_events(fixtures_dir):
     events_file = fixtures_dir / "claude-events.jsonl"
     metrics = extract_metrics(events_file, format="claude")
 
-    assert metrics.tool_calls >= 1   # tool_use blocks in fixture
+    assert metrics.tool_calls == 2   # exactly the fixture's tool_use blocks
     assert metrics.llm_calls == 0    # no usage signal; proxy-authoritative
-    assert metrics.cost_usd == 0.0
+    assert metrics.tokens_input == 16602  # result-event fallback (proxy wins when live)
+    assert metrics.cost_usd == 0.0   # claude's own cost figure untrusted (costBasis unknown)

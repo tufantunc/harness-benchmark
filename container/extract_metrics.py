@@ -273,16 +273,24 @@ def parse_claude_events(lines: list[str]) -> Metrics:
     thousands of lines), assistant (message.content blocks; tool_use =
     tool call), user (tool_result — not counted), result. z.ai's
     anthropic-compatible SSE emulation omits usage in stream-json events
-    (zeros) — llm_calls stays 0 so the proxy request_count fallback wins;
-    tokens come from the proxy's SSE extractor.
+    (zeros) — llm_calls stays 0 so the proxy request_count fallback wins.
+    The terminal result event carries exact token totals: they fill
+    Metrics only as a fallback (the proxy wins wherever it parsed SSE),
+    guarding the analyze-proxy-crash path. Its total_cost_usd is
+    deliberately NOT extracted — claude computes it against its own price
+    table with costBasis "unknown" for non-Anthropic models.
     """
     m = Metrics()
     for evt in _iter_events(lines):
-        if evt.get("type") != "assistant":
-            continue
-        for block in evt.get("message", {}).get("content", []):
-            if isinstance(block, dict) and block.get("type") == "tool_use":
-                m.tool_calls += 1
+        if evt.get("type") == "assistant":
+            for block in evt.get("message", {}).get("content", []):
+                if isinstance(block, dict) and block.get("type") == "tool_use":
+                    m.tool_calls += 1
+        elif evt.get("type") == "result":
+            usage = evt.get("usage") or {}
+            m.tokens_input += usage.get("input_tokens", 0)
+            m.tokens_output += usage.get("output_tokens", 0)
+            m.tokens_cached += usage.get("cache_read_input_tokens", 0)
     return m
 
 

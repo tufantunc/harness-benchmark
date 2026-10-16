@@ -66,7 +66,8 @@ const systemHashes = new Set();
 const toolsHashes = new Set();
 let firstSystemTokens = 0;
 let firstToolsTokens = 0;
-const servedModels = new Set();
+let servedModels = new Set();
+let requestModel = null;
 
 for (const file of files) {
     const prefix = file.replace('-request.json', '');
@@ -77,6 +78,11 @@ for (const file of files) {
     try {
         reqJson = JSON.parse(fs.readFileSync(reqPath, 'utf8'));
     } catch { continue; }
+
+    // Remember the requested model for the served-model fallback
+    if (requestModel === null && typeof reqJson.model === 'string' && reqJson.model) {
+        requestModel = reqJson.model;
+    }
 
     // Extract system prompt and tools from request
     // Handles OpenAI chat (messages[0].role=system), OpenAI Responses
@@ -142,12 +148,12 @@ for (const file of files) {
 // Fallback for endpoints whose SSE emulation omits the model field entirely
 // (z.ai's anthropic-compatible messages): take it from the first request
 // body. Only fires when NO response carried a model — aliased OpenAI
-// endpoints always do, so this never masks a silent upgrade.
-if (servedModels.size === 0 && files.length > 0) {
-    try {
-        const reqJson = JSON.parse(fs.readFileSync(path.join(CAPTURE_DIR, files[0]), 'utf8'));
-        if (typeof reqJson.model === 'string' && reqJson.model) servedModels.add(reqJson.model);
-    } catch {}
+// endpoints always do, so this never masks a silent upgrade. The source
+// marker records that this value is client-claimed, not server-attested.
+let servedModelSource = servedModels.size > 0 ? 'response' : 'none';
+if (servedModels.size === 0 && requestModel) {
+    servedModels.add(requestModel);
+    servedModelSource = 'request';
 }
 
 const result = {
@@ -161,6 +167,7 @@ const result = {
     prefix_variants: Math.max(systemHashes.size, toolsHashes.size),
     request_count: files.length,
     served_model: [...servedModels].sort().join('+'),
+    served_model_source: servedModelSource,
 };
 
 console.log(JSON.stringify(result, null, 2));
