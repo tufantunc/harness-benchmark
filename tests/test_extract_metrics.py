@@ -288,7 +288,8 @@ def test_extract_wstack_events(fixtures_dir):
     events_file = fixtures_dir / "wstack-events.jsonl"
     metrics = extract_metrics(events_file, format="wstack")
 
-    assert metrics.tool_calls >= 1   # tool_use blocks in fixture
+    assert metrics.tool_calls == 1   # exactly the fixture's tool_use block
     assert metrics.llm_calls == 0    # leader-only events undercount; proxy-authoritative
     assert metrics.tokens_input == 0
+    assert metrics.tokens_output == 0
     assert metrics.cost_usd == 0.0

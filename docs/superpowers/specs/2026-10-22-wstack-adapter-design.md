@@ -13,7 +13,7 @@ with its own agent runtime, not an orchestrator of other CLIs) as harness 16.
 
 - Release binaries + official SHA256SUMS → omp-style pinned install, no
   installer drift (v1.1.12, wstack-linux-arm64)
-- `-p, --print <query>` one-shot; positional task also runs-and-exits
+- one-shot = **positional task** (`wstack "<task>"` runs and exits); in 1.1.12 `-p` starts a REPL instead (docs lag the binary — found empirically)
 - `--output-format stream-json` — "init, assistant, tool_result, result
   lines" (clean parser schema; `--include-partial-messages` left off)
 - `--yolo-plus` — never ask for anything (explicit deny rules still refuse)
@@ -45,8 +45,9 @@ with its own agent runtime, not an orchestrator of other CLIs) as harness 16.
 ## Invocation
 
 ```bash
-wstack -p "$PROMPT" --provider benchmark --yolo-plus \
-    --output-format stream-json $MODEL_FLAG > /output/events.jsonl
+wstack "$PROMPT" --provider benchmark --yolo-plus \
+    --output-format stream-json --no-models-refresh \
+    $MODEL_FLAG > /output/events.jsonl
 ```
 
 (model_flag: `--model $MODEL_NAME`)
