@@ -279,3 +279,16 @@ def test_extract_claude_events(fixtures_dir):
     assert metrics.llm_calls == 0    # no usage signal; proxy-authoritative
     assert metrics.tokens_input == 16602  # result-event fallback (proxy wins when live)
     assert metrics.cost_usd == 0.0   # claude's own cost figure untrusted (costBasis unknown)
+
+
+def test_extract_wstack_events(fixtures_dir):
+    """wstack one-shot stream-json: assistant events carry only the LEADER's
+    messages (fleet subagent calls appear solely in proxy captures) —
+    llm_calls/tokens left to the proxy; tool_use blocks count tool calls."""
+    events_file = fixtures_dir / "wstack-events.jsonl"
+    metrics = extract_metrics(events_file, format="wstack")
+
+    assert metrics.tool_calls >= 1   # tool_use blocks in fixture
+    assert metrics.llm_calls == 0    # leader-only events undercount; proxy-authoritative
+    assert metrics.tokens_input == 0
+    assert metrics.cost_usd == 0.0

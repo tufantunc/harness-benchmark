@@ -1,0 +1,30 @@
+# harnesses/wstack/manifest.yaml
+name: wstack
+version: "1.1.12"
+install: pinned release binary wstack-linux-arm64 v1.1.12 (SHA256SUMS) — see docker/Dockerfile
+
+invoke:
+  # positional task = one-shot run-and-exit; -p in 1.1.12 starts a REPL instead
+  command: wstack "$PROMPT" --provider benchmark --yolo-plus --output-format stream-json --no-models-refresh
+  model_flag: --model $MODEL_NAME
+
+setup: |
+  mkdir -p ~/.wrongstack/profiles/default
+  cat > ~/.wrongstack/profiles/default/config.json <<WSTACKEOF
+  {
+    "provider": "benchmark",
+    "model": "$MODEL_NAME",
+    "providers": {
+      "benchmark": {
+        "type": "openai-compatible",
+        "family": "openai-compatible",
+        "baseUrl": "$MODEL_URL",
+        "apiKey": "$API_KEY",
+        "models": [{ "id": "$MODEL_NAME" }]
+      }
+    }
+  }
+  WSTACKEOF
+
+metric_source: events.jsonl
+metric_format: wstack

@@ -79,6 +79,13 @@ RUN curl -fsSL -o /usr/local/bin/omp \
     chmod +x /usr/local/bin/omp && \
     omp --version
 
+# Install WrongStack wstack (pinned release binary, hash from official SHA256SUMS)
+RUN curl -fsSL -o /usr/local/bin/wstack \
+    https://github.com/WrongStack/WrongStack/releases/download/v1.1.12/wstack-linux-arm64 && \
+    echo "4f74c61668f9adc3460f0a7c4a42803df42bf860bc03fbe05d2eda94e405850f  /usr/local/bin/wstack" | sha256sum -c - && \
+    chmod +x /usr/local/bin/wstack && \
+    wstack version
+
 # Copy container helpers
 COPY container/ /app/container/
 COPY docker/entrypoint.sh /app/entrypoint.sh

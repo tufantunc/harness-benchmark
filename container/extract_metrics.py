@@ -294,6 +294,27 @@ def parse_claude_events(lines: list[str]) -> Metrics:
     return m
 
 
+def parse_wstack_events(lines: list[str]) -> Metrics:
+    """Parse wstack one-shot --output-format stream-json (positional task;
+    -p starts a REPL instead in 1.1.12).
+
+    Verified against a live container run. Events: init, assistant
+    (content tool_use blocks; usage carries only the LEADER's messages),
+    tool_result, result. The director-mode fleet's subagent calls — the
+    majority of provider traffic — appear solely in proxy captures, so
+    llm_calls/tokens stay 0 for the proxy fallback/request totals;
+    tool_use blocks count tool calls.
+    """
+    m = Metrics()
+    for evt in _iter_events(lines):
+        if evt.get("type") != "assistant":
+            continue
+        for block in evt.get("content", []):
+            if isinstance(block, dict) and block.get("type") == "tool_use":
+                m.tool_calls += 1
+    return m
+
+
 def parse_qwen_events(lines: list[str]) -> Metrics:
     """Parse qwen -o stream-json output.
 
@@ -373,6 +394,7 @@ PARSERS = {
     "copilot": parse_copilot_events,
     "omp": parse_omp_events,
     "claude": parse_claude_events,
+    "wstack": parse_wstack_events,
     **{fmt: _best_effort_parser(llm, tool) for fmt, (llm, tool) in _BEST_EFFORT_FORMATS.items()},
 }
 
