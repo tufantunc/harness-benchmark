@@ -51,6 +51,13 @@ v2 is a new npm package maintained in parallel with v1 (`opencode-ai`, still
   `message_end` only and tools from `tool_execution_start` only (pi's parser
   would count each call up to three times here). `usage.input` excludes cache
   reads; the proxy stays authoritative.
+- The adapter drops `message_update` lines: each carries a snapshot of the
+  whole message so far, so the file grows quadratically (one real task: 51 MB,
+  99.7% of it these lines; a filtered 11-request run: 368 KB). `grep --line-buffered` so a
+  timeout kill keeps everything written so far.
+- `python_repl` has no per-call timeout: a model-written exponential
+  "speed check" ran until the task timeout (tests still passed). Exits 0 even
+  when the provider fails (e.g. 429).
 
 ## whycodes — WhyCodes 0.6.24
 
@@ -68,6 +75,11 @@ v2 is a new npm package maintained in parallel with v1 (`opencode-ai`, still
   `WHYCODES_SANDBOX=off` (no bubblewrap in the container).
 - Events: NDJSON; one `usage` event per LLM request, `tool_start` per tool
   call; the final `result.usage` is the run total and is not re-added.
+- `usage` events carry no cache figures, so `tokens_cached` comes from the
+  proxy, which now reads OpenAI Chat `prompt_tokens_details.cached_tokens`
+  (before that it was 0 for whycodes and 11 other OpenAI-protocol harnesses;
+  `scripts/backfill-openai-cache.py` recomputes stored runs).
+- Retries 429s itself (4 tries, ~20s) before failing.
 
 ## Verification
 
@@ -75,3 +87,7 @@ v2 is a new npm package maintained in parallel with v1 (`opencode-ai`, still
   OpenAI-compatible upstream (paths sanitized to `/workdir`).
 - Container smoke test against the mock upstream (plumbing: config, proxy
   capture, events, exit), then a real-key run per harness.
+- Real runs (glm-5.3, python/book-store), all 20 tests passing:
+  opencode2 210s / 9 requests (8 steps + title; 7 `step_finish` for 8
+  `step_start`, confirming the parser choice); prime-agent 141s / 7 requests,
+  parsed calls and tokens equal to the proxy's; whycodes 191s / 8 requests.

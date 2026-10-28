@@ -6,6 +6,10 @@
 # into the kernel venv at session start, and --offline cancels that install
 # ("Python skill edit failed to install and will be unavailable"). Online it
 # takes ~1.5s per run; installing them at image build did not stick.
+# message_update events are dropped: each carries a snapshot of the whole
+# message so far (one real task wrote 51 MB, 99.7% of it these lines), and
+# the parser reads only message_end and tool_execution_start. Line-buffered
+# so a timeout kill does not lose grep's pending output.
 set -euo pipefail
 
 PROMPT_FILE="$1"
@@ -21,7 +25,7 @@ prime-agent \
     --provider benchmark \
     $MODEL_FLAG \
     -p "$PROMPT" \
-    < /dev/null \
-    > /output/events.jsonl 2>/output/agent-stderr.log
+    < /dev/null 2>/output/agent-stderr.log \
+    | { grep --line-buffered -v '^{"type":"message_update"' || true; } > /output/events.jsonl
 
 echo $? > /output/agent-exit-code
