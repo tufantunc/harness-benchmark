@@ -108,7 +108,10 @@ export function LeaderboardTable({ summaries, onSelectHarness }: LeaderboardTabl
                 className={`border-t border-zinc-800 hover:bg-zinc-900 cursor-pointer ${i === 0 ? 'font-semibold' : ''}`}
               >
                 <td className="px-3 py-2 text-sm text-zinc-600">{i + 1}</td>
-                <td className="px-3 py-2 text-sm font-medium">{s.harness}</td>
+                <td className="px-3 py-2 text-sm font-medium">
+                  {s.harness}
+                  {s.version && <span className="ml-1.5 text-xs font-normal text-zinc-500">v{s.version}</span>}
+                </td>
                 {columns.map(c => <td key={c.label} className="px-3 py-2 text-sm">{c.render(s)}</td>)}
               </tr>
             ))}

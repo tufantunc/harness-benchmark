@@ -40,8 +40,8 @@ def test_generate_markdown(tmp_path):
     lb = compute_leaderboard(store, model="glm-5.2")
     md = generate_markdown(lb, model="glm-5.2")
 
-    assert "| opencode |" in md
-    assert "| pi |" in md
+    assert "| opencode 1.18.34 |" in md  # version suffix from harness-versions.json
+    assert "| pi 1.0.1 |" in md
     assert "glm-5.2" in md
 
 

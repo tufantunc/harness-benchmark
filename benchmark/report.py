@@ -11,6 +11,16 @@ from pathlib import Path
 from .config import Config
 from .store import Store
 
+VERSIONS_FILE = Path(__file__).resolve().parent.parent / "harness-versions.json"
+
+
+def load_versions() -> dict[str, str]:
+    """Harness versions as run in the recorded campaigns (harness-versions.json)."""
+    try:
+        return {k: v for k, v in json.loads(VERSIONS_FILE.read_text()).items() if not k.startswith("_")}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
 
 def compute_leaderboard(store: Store, model: str | None = None, language: str | None = None) -> list[dict]:
     """Aggregate results per harness, return sorted leaderboard rows."""
@@ -45,6 +55,7 @@ def compute_leaderboard(store: Store, model: str | None = None, language: str | 
 
         entries.append({
             "harness": harness,
+            "version": load_versions().get(harness, ""),
             "served_model": " + ".join(served_models) if served_models else "—",
             "total_tasks": total,
             "success_rate": round(success_rate, 4),
@@ -74,6 +85,11 @@ def compute_leaderboard(store: Store, model: str | None = None, language: str | 
     return entries
 
 
+def _ver(e: dict) -> str:
+    """Compact version suffix for markdown table cells."""
+    return f" {e['version']}" if e.get("version") else ""
+
+
 def generate_markdown(leaderboard: list[dict], model: str) -> str:
     lines = [
         f"# Leaderboard — {model}",
@@ -85,7 +101,7 @@ def generate_markdown(leaderboard: list[dict], model: str) -> str:
     ]
     for e in leaderboard:
         lines.append(
-            f"| {e['rank']} | {e['harness']} | {e['served_model']} | {e['total_tasks']} | "
+            f"| {e['rank']} | {e['harness']}{_ver(e)} | {e['served_model']} | {e['total_tasks']} | "
             f"{e['success_rate']:.1%} | {e['pass_at_k']:.1%} | "
             f"{e['tokens_per_success']:,} | ${e['avg_cost_per_task']:.4f} | "
             f"{e['avg_duration']:.0f}s | {e['avg_requests']:.1f} |"
@@ -100,7 +116,7 @@ def generate_markdown(leaderboard: list[dict], model: str) -> str:
     ])
     for e in leaderboard:
         lines.append(
-            f"| {e['harness']} | "
+            f"| {e['harness']}{_ver(e)} | "
             f"{e['avg_cache_write']:,} | {e['avg_cache_read']:,} | "
             f"{e['avg_sys_prompt_tokens']:,} | {e['avg_tool_schema_tokens']:,} | "
             f"{e['prefix_stable_rate']:.0%} |"
@@ -158,6 +174,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
 <script>
 const DATA = __DATA_PLACEHOLDER__;
+const VERSIONS = __VERSIONS_PLACEHOLDER__;
 
 function aggregate(items) {
   const total = items.length;
@@ -215,7 +232,7 @@ function render(model, lang) {
     '<th>Cost/Run</th><th>Avg Time</th></tr></thead><tbody>';
   entries.forEach((r, i) => {
     html += '<tr class="harness-row ' + (i===0?'rank-1':'') + '" onclick="toggleDetail(\\'' + r.harness + '\\')">' +
-      '<td>' + (i+1) + '</td><td>' + r.harness + '</td><td>' + r.total + '</td>' +
+      '<td>' + (i+1) + '</td><td>' + r.harness + (VERSIONS[r.harness] ? ' <span class="muted">v' + VERSIONS[r.harness] + '</span>' : '') + '</td><td>' + r.total + '</td>' +
       '<td>' + pct(r.successRate) + '</td><td>' + pct(r.passK) + '</td>' +
       '<td>' + fmt(r.avgIn) + '</td><td>' + fmt(r.avgOut) + '</td>' +
       '<td>' + r.avgLLM.toFixed(1) + '</td><td>' + (r.avgTools > 0 ? r.avgTools.toFixed(1) : '-') + '</td>' +
@@ -230,7 +247,7 @@ function render(model, lang) {
     '<th>Sys Prompt</th><th>Tool Schemas</th><th>API Reqs</th>' +
     '<th>Prefix Stable</th></tr></thead><tbody>';
   entries.forEach(r => {
-    cacheHtml += '<tr><td>' + r.harness + '</td>' +
+    cacheHtml += '<tr><td>' + r.harness + (VERSIONS[r.harness] ? ' <span class="muted">v' + VERSIONS[r.harness] + '</span>' : '') + '</td>' +
       '<td>' + fmt(r.avgSysPrompt) + '</td><td>' + fmt(r.avgToolSchema) + '</td>' +
       '<td>' + r.avgRequests.toFixed(1) + '</td>' +
       '<td><span class="badge ' + (r.stableRate > 0.8 ? 'badge-yes' : 'badge-no') + '">' + pct(r.stableRate) + '</span></td></tr>';
@@ -320,7 +337,9 @@ def generate_report(config: Config):
     assets_dir.mkdir(exist_ok=True)
     (assets_dir / "leaderboard-data.json").write_text(json.dumps(raw_data, indent=2))
 
-    html = HTML_TEMPLATE.replace("__DATA_PLACEHOLDER__", json.dumps(raw_data))
+    html = (HTML_TEMPLATE
+            .replace("__DATA_PLACEHOLDER__", json.dumps(raw_data))
+            .replace("__VERSIONS_PLACEHOLDER__", json.dumps(load_versions())))
     (pages_path / "index.html").write_text(html)
 
     if raw_data:

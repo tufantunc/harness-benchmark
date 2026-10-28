@@ -65,11 +65,14 @@ function extractUsageFromSse(body) {
         try {
             const json = JSON.parse(data);
 
-            // Anthropic: message_start has input+cache, message_delta has output
+            // Anthropic: message_start has input+cache, message_delta has output.
+            // input_tokens is made cache-INCLUSIVE (OpenAI prompt_tokens
+            // semantics) so tokens_input compares across protocols;
+            // cache_read_tokens keeps the cache-hit detail.
             if (json.type === 'message_start' && json.message && json.message.usage) {
                 const u = json.message.usage;
                 usage = {
-                    input_tokens: u.input_tokens || 0,
+                    input_tokens: (u.input_tokens || 0) + (u.cache_read_input_tokens || 0),
                     output_tokens: u.output_tokens || 0,
                     cache_read_tokens: u.cache_read_input_tokens || 0,
                     cache_write_tokens: u.cache_creation_input_tokens || 0,
@@ -79,11 +82,15 @@ function extractUsageFromSse(body) {
                 outputTokensFromDelta = json.usage.output_tokens || 0;
             }
 
-            // OpenAI: usage in final chunk
+            // OpenAI: usage in final chunk. Anthropic-shaped usage (SSE
+            // message_delta or plain JSON) reports input_tokens WITHOUT
+            // cache reads; add them so input is cache-inclusive across
+            // protocols (OpenAI prompt_tokens already includes them).
             if (json.usage) {
                 const u = json.usage;
+                const anthropicCacheRead = u.cache_read_input_tokens || 0;
                 usage = {
-                    input_tokens: u.prompt_tokens || u.input_tokens || 0,
+                    input_tokens: (u.prompt_tokens || u.input_tokens || 0) + anthropicCacheRead,
                     output_tokens: u.completion_tokens || u.output_tokens || 0,
                     cache_read_tokens: u.cache_read_input_tokens || u.cache_read || 0,
                     cache_write_tokens: u.cache_creation_input_tokens || u.cache_write || 0,

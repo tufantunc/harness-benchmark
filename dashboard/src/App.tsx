@@ -27,7 +27,7 @@ export default function App() {
     );
   }, [model, language]);
 
-  const summaries = useMemo(() => aggregate(filteredRuns), [filteredRuns]);
+  const summaries = useMemo(() => aggregate(filteredRuns, data.harness_versions ?? {}), [filteredRuns, data.harness_versions]);
 
   const handleExport = () => {
     const blob = new Blob([JSON.stringify({ ...data, runs: filteredRuns }, null, 2)], { type: 'application/json' });

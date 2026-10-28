@@ -29,6 +29,7 @@ export interface TaskRun {
 
 export interface HarnessSummary {
   harness: string;
+  version: string;
   total_tasks: number;
   success_count: number;
   success_rate: number;
@@ -47,4 +48,5 @@ export interface HarnessSummary {
 export interface BenchmarkData {
   runs: TaskRun[];
   generated_at: string;
+  harness_versions?: Record<string, string>;
 }

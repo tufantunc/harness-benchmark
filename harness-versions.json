@@ -1,0 +1,19 @@
+{
+  "_comment": "Harness versions AS RUN in the recorded campaigns (not current image state — unpinned npm packages drift on rebuilds). Update when a harness is re-run.",
+  "opencode": "1.18.34",
+  "pi": "1.0.1",
+  "grok": "1.0.46",
+  "junie": "26.9.7",
+  "cline": "3.0.68",
+  "kilo": "7.8.3",
+  "kimi": "0.38.0",
+  "autohand": "0.9.8",
+  "crush": "0.90.0",
+  "goose": "1.52.0",
+  "dsh": "0.2.0-rc.2",
+  "qwen": "0.24.7",
+  "copilot": "1.0.97",
+  "omp": "18.11.0",
+  "claude": "2.1.301",
+  "wstack": "1.1.12"
+}

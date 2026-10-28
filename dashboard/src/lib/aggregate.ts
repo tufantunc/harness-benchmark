@@ -1,6 +1,6 @@
 import type { TaskRun, HarnessSummary } from './types';
 
-export function aggregate(runs: TaskRun[]): HarnessSummary[] {
+export function aggregate(runs: TaskRun[], versions: Record<string, string> = {}): HarnessSummary[] {
   const byHarness = new Map<string, TaskRun[]>();
   for (const r of runs) {
     if (!byHarness.has(r.harness)) byHarness.set(r.harness, []);
@@ -22,6 +22,7 @@ export function aggregate(runs: TaskRun[]): HarnessSummary[] {
     const hasTools = items.some(i => i.tool_calls > 0);
     summaries.push({
       harness,
+      version: versions[harness] ?? '',
       total_tasks: total,
       success_count: succ.length,
       success_rate: succ.length / total,

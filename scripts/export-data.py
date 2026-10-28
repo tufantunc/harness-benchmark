@@ -19,7 +19,14 @@ def export(db_path: str = "results/store.db", output: str = "dashboard/src/data/
     for r in runs:
         by_harness[r["harness"]].append(r)
 
-    data = {"runs": runs, "generated_at": datetime.now().isoformat()}
+    versions = {}
+    versions_file = Path(__file__).resolve().parent.parent / "harness-versions.json"
+    try:
+        versions = {k: v for k, v in json.loads(versions_file.read_text()).items() if not k.startswith("_")}
+    except (OSError, json.JSONDecodeError):
+        pass
+
+    data = {"runs": runs, "generated_at": datetime.now().isoformat(), "harness_versions": versions}
 
     out = Path(output)
     out.parent.mkdir(parents=True, exist_ok=True)
