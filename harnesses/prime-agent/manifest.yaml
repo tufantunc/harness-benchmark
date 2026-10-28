@@ -1,0 +1,46 @@
+# harnesses/prime-agent/manifest.yaml
+# Prime Intellect's Prime Agent (Rust). Single tool: a persistent Python REPL
+# (`python_repl`) through which every other capability is called.
+name: prime-agent
+version: "0.10.1"
+install: pinned linux-arm64 release archive + bundled install.sh --archive (see Dockerfile)
+
+invoke:
+  command: prime-agent --mode json --cwd "$WORKDIR" --provider benchmark -p "$PROMPT"
+  model_flag: --model $MODEL_NAME
+
+# Custom providers live in ~/.prime/agent/models.json; baseUrl/apiKey are
+# required for a custom model. No Prime account is needed (/login is only
+# for the interactive UI). Telemetry defaults to on — settings.json turns it
+# off (the same file `prime-agent telemetry off` writes).
+setup: |
+  mkdir -p ~/.prime/agent
+  cat > ~/.prime/agent/models.json <<PAEOF
+  {
+    "providers": {
+      "benchmark": {
+        "api": "openai-completions",
+        "baseUrl": "$MODEL_URL",
+        "apiKey": "$API_KEY",
+        "models": [
+          {
+            "id": "$MODEL_NAME",
+            "api": "openai-completions",
+            "contextWindow": 128000,
+            "maxTokens": 16384
+          }
+        ]
+      }
+    }
+  }
+  PAEOF
+  cat > ~/.prime/agent/settings.json <<PAEOF
+  {
+    "telemetry": {
+      "enabled": false
+    }
+  }
+  PAEOF
+
+metric_source: events.jsonl
+metric_format: prime-agent

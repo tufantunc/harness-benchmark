@@ -1,0 +1,38 @@
+# harnesses/opencode2/manifest.yaml
+# OpenCode v2 — new npm package (@opencode/cli), maintained in parallel with
+# v1 (opencode-ai). Installed to its own prefix in the Dockerfile because both
+# packages ship an `opencode` bin; this harness calls `opencode2`.
+name: opencode2
+version: "2.2.0"
+install: npm install --prefix /opt/opencode2 @opencode/cli@2.2.0
+
+invoke:
+  command: opencode2 run --standalone --format json --auto "$PROMPT"
+  model_flag: --model benchmark/$MODEL_NAME
+
+# v1's opencode.json provider block loads unchanged in v2 (verified with
+# `opencode debug config`: translated to package aisdk:@ai-sdk/openai-compatible).
+setup: |
+  mkdir -p "$WORKDIR"
+  cat > "$WORKDIR/opencode.json" <<OCEOF
+  {
+    "provider": {
+      "benchmark": {
+        "npm": "@ai-sdk/openai-compatible",
+        "name": "benchmark",
+        "options": {
+          "baseURL": "$MODEL_URL",
+          "apiKey": "$API_KEY"
+        },
+        "models": {
+          "$MODEL_NAME": {
+            "name": "$MODEL_NAME"
+          }
+        }
+      }
+    }
+  }
+  OCEOF
+
+metric_source: events.jsonl
+metric_format: opencode2

@@ -1,0 +1,12 @@
+{"type":"init","session_id":"8b6006a5-f987-4c26-8519-b7cc5832c029","provider":"benchmark","model":"glm-5.3","agent":"build","cwd":"/workdir"}
+{"type":"status","message":"intent:change conf=0.40"}
+{"type":"status","message":"LLM request (step 1)…"}
+{"type":"tool_start","id":"t1","name":"bash","input":{"command":"ls","filePath":"/workdir/a.txt","pattern":"*"}}
+{"type":"usage","input_tokens":100,"output_tokens":10}
+{"type":"status","message":"Running tool `bash`…"}
+{"type":"status","message":"bg bg-1 done: ls (exit 0)"}
+{"type":"tool_end","id":"t1","content":"a.txt\n","is_error":false}
+{"type":"status","message":"LLM request (step 2)…"}
+{"type":"text_delta","text":"done"}
+{"type":"usage","input_tokens":120,"output_tokens":5}
+{"type":"result","result":"done","session_id":"8b6006a5-f987-4c26-8519-b7cc5832c029","provider":"benchmark","model":"glm-5.3","agent":"build","usage":{"input_tokens":220,"output_tokens":15},"duration_ms":5,"is_error":false}

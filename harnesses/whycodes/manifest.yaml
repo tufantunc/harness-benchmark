@@ -1,0 +1,31 @@
+# harnesses/whycodes/manifest.yaml
+# WhyCodes (whycorporation, Rust). Upstream ships no linux-arm64 binary, so
+# the Dockerfile builds v0.6.24 from source with upstream's release command.
+name: whycodes
+version: "0.6.24"
+install: multi-stage cargo build of tag v0.6.24 (see Dockerfile)
+
+invoke:
+  command: whycodes generate "$PROMPT" -d "$WORKDIR" --format stream-json --approve-tools
+  model_flag: ""
+
+# Any [providers.<name>] that is not built in becomes an OpenAI-compatible
+# CustomProvider. `name` is required despite the docs (0.6.24 fails with
+# "missing field `name`" without it), and api_key must sit in the block —
+# the env key is ignored for custom providers. -P only accepts built-in
+# names, so the model is selected through default_model instead of flags.
+setup: |
+  mkdir -p ~/.whycodes
+  cat > ~/.whycodes/config.toml <<WCEOF
+  [providers.benchmark]
+  name = "benchmark"
+  base_url = "$MODEL_URL"
+  api_key = "$API_KEY"
+
+  [default_model]
+  provider_id = "benchmark"
+  model_id = "$MODEL_NAME"
+  WCEOF
+
+metric_source: events.jsonl
+metric_format: whycodes

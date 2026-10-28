@@ -82,6 +82,28 @@ def parse_pi_events(lines: list[str]) -> Metrics:
     return m
 
 
+def parse_prime_agent_events(lines: list[str]) -> Metrics:
+    """Parse prime-agent --mode json -p output.
+
+    pi-shaped events (session, agent_start, turn_*, message_*,
+    tool_execution_*, agent_end). Unlike parse_pi_events, usage is read from
+    assistant message_end only and tools from tool_execution_start only:
+    each assistant message appears in message_start AND message_end, and its
+    toolCall blocks repeat what tool_execution_start already counts.
+    usage.input excludes cache reads (proxy is authoritative).
+    """
+    m = Metrics()
+    for evt in _iter_events(lines):
+        evt_type = evt.get("type")
+        if evt_type == "message_end":
+            msg = evt.get("message", {})
+            if msg.get("role") == "assistant":
+                _accumulate_usage(m, msg.get("usage", {}))
+        elif evt_type == "tool_execution_start":
+            m.tool_calls += 1
+    return m
+
+
 def parse_opencode_events(lines: list[str]) -> Metrics:
     """Parse opencode run --format json output.
 
@@ -104,6 +126,20 @@ def parse_opencode_events(lines: list[str]) -> Metrics:
                 _accumulate_usage(m, usage)
         elif evt_type == "tool_use":
             m.tool_calls += 1
+    return m
+
+
+def parse_opencode2_events(lines: list[str]) -> Metrics:
+    """Parse opencode v2 (@opencode/cli) run --format json output.
+
+    Same event shapes as v1 (step_start/tool_use/step_finish/text), but
+    2.2.0 emits no step_start/step_finish around the final text-only step
+    (seen against a mock upstream), so step_finish token sums undercount.
+    llm_calls stays 0 so the proxy request_count wins; tokens remain a
+    fallback only (the proxy is authoritative).
+    """
+    m = parse_opencode_events(lines)
+    m.llm_calls = 0
     return m
 
 
@@ -315,6 +351,24 @@ def parse_wstack_events(lines: list[str]) -> Metrics:
     return m
 
 
+def parse_whycodes_events(lines: list[str]) -> Metrics:
+    """Parse whycodes generate --format stream-json output.
+
+    NDJSON events: init, status, text_delta, tool_start, tool_end, usage
+    (one per LLM request: {input_tokens, output_tokens}), result (whose
+    usage is the run total — NOT accumulated, it repeats the per-request
+    sums). No cache figures in events; the proxy is authoritative.
+    """
+    m = Metrics()
+    for evt in _iter_events(lines):
+        evt_type = evt.get("type")
+        if evt_type == "usage":
+            _accumulate_usage(m, evt)
+        elif evt_type == "tool_start":
+            m.tool_calls += 1
+    return m
+
+
 def parse_qwen_events(lines: list[str]) -> Metrics:
     """Parse qwen -o stream-json output.
 
@@ -385,6 +439,8 @@ _BEST_EFFORT_FORMATS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
 PARSERS = {
     "pi": parse_pi_events,
     "opencode": parse_opencode_events,
+    "opencode2": parse_opencode2_events,
+    "prime-agent": parse_prime_agent_events,
     "grok": parse_grok_events,
     "junie": parse_junie_events,
     "cline": parse_cline_events,
@@ -395,6 +451,7 @@ PARSERS = {
     "omp": parse_omp_events,
     "claude": parse_claude_events,
     "wstack": parse_wstack_events,
+    "whycodes": parse_whycodes_events,
     **{fmt: _best_effort_parser(llm, tool) for fmt, (llm, tool) in _BEST_EFFORT_FORMATS.items()},
 }
 

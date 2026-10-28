@@ -1,4 +1,17 @@
 # docker/Dockerfile — single image with all tooling
+
+# WhyCodes: upstream ships no linux-arm64 binary, so build the pinned tag from
+# source with upstream's release command (release.yml). Bookworm builder =
+# the runtime's glibc. rust-toolchain.toml (channel "stable" + components) is
+# dropped so rustup keeps the image's pinned toolchain instead of fetching
+# whatever stable is current.
+FROM rust:1.97-bookworm AS whycodes-build
+RUN git clone --depth 1 --branch v0.6.24 https://github.com/whycorporation/whycodes.git /src && \
+    test "$(git -C /src rev-parse HEAD)" = "0811535499bbae9cb1bcaefd9a0ca2b94059bf3f" && \
+    rm /src/rust-toolchain.toml
+WORKDIR /src
+RUN cargo build --release --locked -p whycodes-cli --features bundled-sqlite
+
 FROM node:22-slim
 
 # System dependencies
@@ -85,6 +98,33 @@ RUN curl -fsSL -o /usr/local/bin/wstack \
     echo "4f74c61668f9adc3460f0a7c4a42803df42bf860bc03fbe05d2eda94e405850f  /usr/local/bin/wstack" | sha256sum -c - && \
     chmod +x /usr/local/bin/wstack && \
     wstack version
+
+# Harnesses 17-19 sit after every existing install so adding them reuses the
+# cached layers above (re-running the unpinned installers would drift the
+# other harnesses' versions and trip their installer-script hash pins).
+
+# Install OpenCode v2 (@opencode/cli) in its own prefix: it ships an `opencode`
+# bin that would clash with v1's (opencode-ai) — the harness calls `opencode2`.
+RUN npm install --prefix /opt/opencode2 @opencode/cli@2.2.0 && \
+    ln -s /opt/opencode2/node_modules/.bin/opencode2 /usr/local/bin/opencode2 && \
+    opencode2 --version
+
+# Install Prime Agent (pinned release archive, SHA256 from the release's
+# manifest.json). The archive's bundled install.sh --archive installs it
+# offline from that file (launcher → ~/.local/bin) and pre-warms the Python
+# kernel (uv + venv) so the first run needs no network for it.
+RUN curl -fsSL -o /tmp/prime-agent-0.10.1-linux-arm64.tar.gz \
+    https://github.com/PrimeIntellect-ai/prime-agent/releases/download/v0.10.1/prime-agent-0.10.1-linux-arm64.tar.gz && \
+    echo "5af68c10a088538fd4990fd18778d8c7fe28c0491083dc069c5177f733770e91  /tmp/prime-agent-0.10.1-linux-arm64.tar.gz" | sha256sum -c - && \
+    mkdir /tmp/prime-agent && \
+    tar -xzf /tmp/prime-agent-0.10.1-linux-arm64.tar.gz -C /tmp/prime-agent && \
+    sh /tmp/prime-agent/install.sh --archive /tmp/prime-agent-0.10.1-linux-arm64.tar.gz && \
+    rm -rf /tmp/prime-agent /tmp/prime-agent-0.10.1-linux-arm64.tar.gz && \
+    prime-agent --version
+
+# Install WhyCodes (built from source in the whycodes-build stage above)
+COPY --from=whycodes-build /src/target/release/whycodes /usr/local/bin/whycodes
+RUN whycodes --version
 
 # Copy container helpers
 COPY container/ /app/container/

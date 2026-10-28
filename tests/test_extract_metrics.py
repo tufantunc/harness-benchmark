@@ -293,3 +293,41 @@ def test_extract_wstack_events(fixtures_dir):
     assert metrics.tokens_input == 0
     assert metrics.tokens_output == 0
     assert metrics.cost_usd == 0.0
+
+
+def test_extract_opencode2_events(fixtures_dir):
+    """opencode v2 run --format json: v1 event shapes, but no step_finish for
+    the final text step — llm_calls left to the proxy request_count."""
+    events_file = fixtures_dir / "opencode2-events.jsonl"
+    metrics = extract_metrics(events_file, format="opencode2")
+
+    assert metrics.tool_calls == 1   # one tool_use event in fixture
+    assert metrics.llm_calls == 0    # step_finish undercounts; proxy-authoritative
+    assert metrics.tokens_input == 100   # tool step's step_finish only (fallback)
+    assert metrics.tokens_output == 10
+
+
+def test_extract_prime_agent_events(fixtures_dir):
+    """prime-agent --mode json: pi-shaped events; usage from assistant
+    message_end only, tools from tool_execution_start only (no double count
+    from message_start/toolCall blocks)."""
+    events_file = fixtures_dir / "prime-agent-events.jsonl"
+    metrics = extract_metrics(events_file, format="prime-agent")
+
+    assert metrics.tool_calls == 1   # one tool_execution_start in fixture
+    assert metrics.llm_calls == 2    # two assistant message_end events
+    assert metrics.tokens_input == 170   # 100 + 70 (cache reads excluded)
+    assert metrics.tokens_output == 15
+    assert metrics.tokens_cached == 50
+
+
+def test_extract_whycodes_events(fixtures_dir):
+    """whycodes stream-json: one usage event per LLM request (the result
+    event's run-total usage must not be added again); tool_start counts."""
+    events_file = fixtures_dir / "whycodes-events.jsonl"
+    metrics = extract_metrics(events_file, format="whycodes")
+
+    assert metrics.tool_calls == 1   # one tool_start in fixture
+    assert metrics.llm_calls == 2    # two usage events
+    assert metrics.tokens_input == 220   # 100 + 120, result total not re-added
+    assert metrics.tokens_output == 15
