@@ -38,18 +38,22 @@ def main() -> int:
     recomputed = {r["artifact_path"]: r for r in map(json.loads, out.stdout.splitlines())}
 
     conn = sqlite3.connect(args.results / "store.db")
-    rows = conn.execute("SELECT id, harness, artifact_path, tokens_cached, cache_read_tokens FROM runs").fetchall()
+    rows = conn.execute(
+        "SELECT id, harness, artifact_path, tokens_cached, cache_read_tokens, request_count FROM runs"
+    ).fetchall()
 
     stats = defaultdict(lambda: defaultdict(int))
     updates, decreased = [], []
-    for run_id, harness, artifact_path, cached, cache_read in rows:
+    for run_id, harness, artifact_path, cached, cache_read, request_count in rows:
         s = stats[harness]
         s["rows"] += 1
         s["cached_before"] += cached
         s["cache_read_before"] += cache_read
         r = recomputed.get(artifact_path)
-        if not r or not r["responses"]:
-            s["skipped"] += 1  # nothing captured: keep the stored values
+        # Skip when nothing was captured, or when the artifact directory holds
+        # a different run than the stored row (its request_count disagrees).
+        if not r or not r["responses"] or r["request_count"] != request_count:
+            s["skipped"] += 1
             new_cache_read, new_cached = cache_read, cached
         else:
             new_cache_read = r["cache_read_tokens"]
