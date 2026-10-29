@@ -48,8 +48,9 @@ def test_openai_chat_without_cache_details():
     assert extract(body)["cache_read_tokens"] == 0
 
 
-def test_anthropic_sse_unchanged():
-    # message_delta carries the full cumulative usage (shape seen in claude runs)
+def test_anthropic_sse_cache_inclusive_input():
+    # message_delta carries the full cumulative usage (shape seen in claude runs);
+    # input_tokens is made cache-inclusive to match OpenAI prompt_tokens
     body = sse(
         {"type": "message_start", "message": {"usage": {"input_tokens": 2746, "output_tokens": 1,
                                                         "cache_read_input_tokens": 13504}}},
@@ -57,7 +58,7 @@ def test_anthropic_sse_unchanged():
                                             "cache_read_input_tokens": 13504}},
     )
     assert extract(body, "text/event-stream") == {
-        "input_tokens": 2746, "output_tokens": 94,
+        "input_tokens": 2746 + 13504, "output_tokens": 94,
         "cache_read_tokens": 13504, "cache_write_tokens": 0,
     }
 
