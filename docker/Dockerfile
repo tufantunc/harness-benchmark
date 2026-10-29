@@ -94,8 +94,8 @@ RUN curl -fsSL -o /usr/local/bin/omp \
 
 # Install WrongStack wstack (pinned release binary, hash from official SHA256SUMS)
 RUN curl -fsSL -o /usr/local/bin/wstack \
-    https://github.com/WrongStack/WrongStack/releases/download/v1.1.12/wstack-linux-arm64 && \
-    echo "4f74c61668f9adc3460f0a7c4a42803df42bf860bc03fbe05d2eda94e405850f  /usr/local/bin/wstack" | sha256sum -c - && \
+    https://github.com/WrongStack/WrongStack/releases/download/v1.3.0/wstack-linux-arm64 && \
+    echo "b20074fd054a86481a129983430c9aedfed2924064a02bcd4298a9d45502f7ef  /usr/local/bin/wstack" | sha256sum -c - && \
     chmod +x /usr/local/bin/wstack && \
     wstack version
 
