@@ -20,6 +20,13 @@ const UPSTREAM = process.env.UPSTREAM_URL;
 const CAPTURE_DIR = process.env.CAPTURE_DIR || '/output/captured-payloads';
 const PORT = parseInt(process.env.PROXY_PORT || '8080', 10);
 
+// Required as a module (scripts/recompute-cache-read.js): expose the usage
+// extraction only — no UPSTREAM check, capture dir or server.
+if (require.main !== module) {
+    module.exports = { extractUsage };
+    return;
+}
+
 if (!UPSTREAM) {
     console.error('[proxy] UPSTREAM_URL not set');
     process.exit(1);
@@ -42,13 +49,20 @@ function extractUsage(respBody, contentType) {
     try { return extractUsageFromJson(JSON.parse(body)); } catch { return null; }
 }
 
+// OpenAI Chat Completions reports cache hits in
+// prompt_tokens_details.cached_tokens (already included in prompt_tokens).
+function cacheReadTokens(u) {
+    return u.cache_read_input_tokens || u.cache_read ||
+        (u.prompt_tokens_details && u.prompt_tokens_details.cached_tokens) || 0;
+}
+
 function extractUsageFromJson(json) {
     const u = json.usage;
     if (!u) return null;
     return {
         input_tokens: u.prompt_tokens || u.input_tokens || 0,
         output_tokens: u.completion_tokens || u.output_tokens || 0,
-        cache_read_tokens: u.cache_read_input_tokens || u.cache_read || 0,
+        cache_read_tokens: cacheReadTokens(u),
         cache_write_tokens: u.cache_creation_input_tokens || u.cache_write || 0,
     };
 }
@@ -92,7 +106,7 @@ function extractUsageFromSse(body) {
                 usage = {
                     input_tokens: (u.prompt_tokens || u.input_tokens || 0) + anthropicCacheRead,
                     output_tokens: u.completion_tokens || u.output_tokens || 0,
-                    cache_read_tokens: u.cache_read_input_tokens || u.cache_read || 0,
+                    cache_read_tokens: cacheReadTokens(u),
                     cache_write_tokens: u.cache_creation_input_tokens || u.cache_write || 0,
                 };
             }
