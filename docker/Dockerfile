@@ -63,7 +63,7 @@ RUN curl -fsSL -o /tmp/bun-install.sh https://bun.sh/install && \
     rm /tmp/bun-install.sh && \
     export PATH="/root/.bun/bin:$PATH" && \
     curl -fsSL -o /tmp/autohand-install.sh https://autohand.ai/install.sh && \
-    echo "f9185f41e935c20b70d949a54b3d4945d1cfecf1eed28d720f0e7a7ef56566cf  /tmp/autohand-install.sh" | sha256sum -c - && \
+    echo "ca8ac11dac0e5df41a0b6d0845fc6600a3874b29d4abdab4af70ea898f5d81bb  /tmp/autohand-install.sh" | sha256sum -c - && \
     AUTOHAND_SKIP_COMPUTER_CONTROL_INSTALL=1 bash /tmp/autohand-install.sh && \
     rm /tmp/autohand-install.sh
 
@@ -80,7 +80,7 @@ ENV PATH="/root/.local/bin:/root/.kimi-code/bin:/root/.bun/bin:${PATH}"
 # Install Grok Build (curl installer, not npm)
 # SHA256 pins the installer script for reproducibility — update both when upgrading grok
 RUN curl -fsSL -o /tmp/grok-install.sh https://x.ai/cli/install.sh && \
-    echo "7fd6fdc75d9418b2e58356726fcbf1ae849416f773925da07d0ccc7a60d3e791  /tmp/grok-install.sh" | sha256sum -c - && \
+    echo "dcc19d498e14f96ab93828251b2848fde94cc2ab0bd6f9cad9baffbf7a229182  /tmp/grok-install.sh" | sha256sum -c - && \
     bash /tmp/grok-install.sh && \
     rm /tmp/grok-install.sh && \
     grok --version
